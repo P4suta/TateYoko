@@ -2,6 +2,10 @@
 # Windows, matching .editorconfig). Explicit binaries are never normalized.
 * text=auto
 
+# The justfile recipes run under bash; keep it LF even on Windows checkouts so
+# stray CRLFs never reach the shell.
+justfile text eol=lf
+
 *.png binary
 *.ico binary
 *.pdf binary

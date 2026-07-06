@@ -36,7 +36,12 @@ jobs:
         with:
           install: true
 
+      # Fail the build on any unformatted code (.editorconfig rules). Same recipe
+      # devs run locally as `just fmt-check` (or `just fmt` to fix in place).
+      - name: Format check
+        run: mise exec -- just fmt-check
+
       # Builds the whole solution (Core, Pdf, App/WinUI, Launcher, tools) and runs
-      # the Core unit tests + Pdf integration tests.
+      # the Core unit tests + Pdf integration tests. `just ci` runs both steps locally.
       - name: Test
-        run: mise exec -- dotnet test TateYoko.slnx -c Release
+        run: mise exec -- just test

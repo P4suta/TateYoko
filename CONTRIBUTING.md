@@ -6,11 +6,15 @@ before proposing new features.
 
 ## Setup
 
-The toolchain is pinned with [mise](https://mise.jdx.dev/) (`.NET 10`):
+The toolchain is pinned with [mise](https://mise.jdx.dev/) (`.NET 10` + [`just`](https://just.systems)):
 
 ```sh
 mise install
 ```
+
+Developer commands live in the `justfile` — the single source of truth shared by local dev and
+CI. Run them under mise: `mise exec -- just <recipe>` (or `just <recipe>` with mise activated).
+`mise exec -- just --list` shows everything.
 
 Building the release bundle also needs **Visual Studio C++ build tools** (the
 launcher is NativeAOT): `winget install Microsoft.VisualStudio.2022.BuildTools`,
@@ -19,10 +23,12 @@ then add "Desktop development with C++".
 ## Development loop
 
 ```sh
-mise exec -- dotnet test TateYoko.slnx                 # Core unit + Pdf integration tests
-mise exec -- dotnet run --project src/TateYoko.App     # run the app (unpackaged)
-mise run publish                                       # assemble the distribution bundle
-mise run icons                                         # regenerate icon assets from assets/AppIcon.png
+mise exec -- just test        # Core unit + Pdf integration + ViewModel state machine tests
+mise exec -- just run         # run the app (unpackaged)
+mise exec -- just fmt         # format the code in place (.editorconfig rules)
+mise exec -- just publish     # assemble the distribution bundle
+mise exec -- just icons       # regenerate icon assets from assets/AppIcon.png
+mise exec -- just ci          # what CI enforces: format check + tests
 ```
 
 ## Architecture rules
@@ -43,7 +49,7 @@ TateYoko is a **hexagonal** design (see the README). The rules that matter:
   (`feat:`, `fix:`, `perf:`, `docs:`, `chore:`, …). We squash-merge, so the title
   becomes the commit message and drives the automated version bump + CHANGELOG
   (release-please — see [docs/RELEASING.md](docs/RELEASING.md)).
-- Make sure `dotnet test` passes and the Core boundary is intact.
+- Make sure `just ci` (format check + `just test`) passes and the Core boundary is intact.
 
 ## Code of Conduct
 
