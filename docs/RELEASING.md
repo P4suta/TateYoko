@@ -13,11 +13,12 @@ No one hand-picks a version number.
 3. **Merging the Release PR** makes release-please create the GitHub Release as a
    **draft** and the `vX.Y.Z` tag, then dispatch the signed build.
 4. **[`release.yml`](../.github/workflows/release.yml)** runs `build → sign → publish`:
-   - `build` — `TateYoko.Pack bundle` assembles the self-contained bundle and a
-     CycloneDX SBOM.
-   - `sign` — Authenticode-signs our five first-party PEs with SSL.com eSigner
-     (see [SIGNING.md](SIGNING.md)). Runs in the approval-gated `release` environment.
-   - `publish` — `TateYoko.Pack package` zips + checksums the signed bundle, writes
+   - `build` — `just bundle` (`TateYoko.Pack bundle`) assembles the self-contained
+     bundle and `just sbom` writes a CycloneDX SBOM.
+   - `sign` — `just sign-stage` → SSL.com eSigner Authenticode-signs our five
+     first-party PEs → `just sign-collect` (see [SIGNING.md](SIGNING.md)). Runs in the
+     approval-gated `release` environment.
+   - `publish` — `just package` (`TateYoko.Pack package`) zips + checksums the signed bundle, writes
      keyless build-provenance + SBOM attestations, attaches the assets to the draft,
      and publishes it (publishing creates the public release).
 

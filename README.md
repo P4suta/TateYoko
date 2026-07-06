@@ -51,18 +51,24 @@ publish/win-x64/
 
 ## Development
 
-The toolchain is managed with **mise** (`mise install` sets up the .NET SDK).
+**mise** pins the toolchain (.NET 10 + [`just`](https://just.systems)); **just** is the single
+command runner shared by local dev and CI. Run recipes under mise so they use the pinned SDK.
 
 ```sh
-mise install
-mise exec -- dotnet test TateYoko.slnx          # all tests (Core unit + PDF integration + ViewModel state machine)
-mise exec -- dotnet run --project src/TateYoko.App   # run in development (unpackaged)
-mise run publish                                 # assemble the distribution bundle into publish/
-mise run icons                                   # regenerate icon assets from assets/AppIcon.png
+mise install                             # toolchain (.NET 10 + just)
+mise exec -- just --list                 # every recipe
+mise exec -- just test                   # all tests (Core unit + PDF integration + ViewModel state machine)
+mise exec -- just run                    # run in development (unpackaged)
+mise exec -- just publish                # assemble the distribution bundle into publish/
+mise exec -- just icons                  # regenerate icon assets from assets/AppIcon.png
+mise exec -- just ci                     # what CI runs: format check + tests
 ```
 
+With mise activated in your shell you can drop the prefix (`just test`). See `justfile` for the full
+list.
+
 Release packaging is orchestrated by the C# tool `tools/TateYoko.Pack` rather than a shell script.
-`mise run publish` is a thin wrapper over `dotnet run --project tools/TateYoko.Pack`. In addition to
+`just publish` is a thin wrapper over `dotnet run --project tools/TateYoko.Pack`. In addition to
 arranging the bundle, it writes a zip and `SHA256SUMS.txt` to `publish/package/`. The launcher is
 built with **NativeAOT**, so building requires **Visual Studio C++ build tools** (MSVC linker +
 Windows SDK) — install with `winget install Microsoft.VisualStudio.2022.BuildTools` and add

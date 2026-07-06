@@ -47,28 +47,28 @@ public sealed class SpreadConversionService
         switch (spec)
         {
             case PagePairSpec.Pair pair:
-            {
-                PageDimension first = source.GetPageDimension(pair.FirstIndex);
-                PageDimension second = source.GetPageDimension(pair.SecondIndex);
-                SpreadLayout layout = _calculator.Calculate(first, second);
-                var placements = new PagePlacement[]
                 {
+                    PageDimension first = source.GetPageDimension(pair.FirstIndex);
+                    PageDimension second = source.GetPageDimension(pair.SecondIndex);
+                    SpreadLayout layout = _calculator.Calculate(first, second);
+                    var placements = new PagePlacement[]
+                    {
                     new(source.GetPageContent(pair.FirstIndex), layout.FirstPosition),
                     new(source.GetPageContent(pair.SecondIndex), layout.SecondPosition!.Value),
-                };
-                return (layout.Spec, placements);
-            }
+                    };
+                    return (layout.Spec, placements);
+                }
 
             case PagePairSpec.Single single:
-            {
-                PageDimension page = source.GetPageDimension(single.PageIndex);
-                SpreadLayout layout = _calculator.CalculateSingle(page, single.Half);
-                var placements = new PagePlacement[]
                 {
+                    PageDimension page = source.GetPageDimension(single.PageIndex);
+                    SpreadLayout layout = _calculator.CalculateSingle(page, single.Half);
+                    var placements = new PagePlacement[]
+                    {
                     new(source.GetPageContent(single.PageIndex), layout.FirstPosition),
-                };
-                return (layout.Spec, placements);
-            }
+                    };
+                    return (layout.Spec, placements);
+                }
 
             default:
                 throw new SpreadException(ErrorKind.Internal, $"unknown spec: {spec.GetType().Name}");

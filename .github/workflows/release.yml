@@ -89,18 +89,14 @@ jobs:
       # build tools NativeAOT needs.
       - name: Build distributable bundle
         shell: bash
-        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- bundle --version "${TAG#v}"
+        run: mise exec -- just bundle version="${TAG#v}"
 
       # CycloneDX SBOM of the shipped app's dependency graph (PDFsharp, Windows App
       # SDK, MVVM, DI, + the first-party libs). Tool is intentionally unpinned until
       # a known-good version is confirmed on the runner (see docs/RELEASING.md).
       - name: Generate SBOM (CycloneDX)
         shell: bash
-        run: |
-          mkdir -p build/sbom
-          dotnet tool install --global CycloneDX
-          dotnet CycloneDX src/TateYoko.App/TateYoko.App.csproj \
-            --output build/sbom --json --filename tateyoko.cdx.json --set-version "${TAG#v}"
+        run: mise exec -- just sbom version="${TAG#v}"
 
       - name: Upload unsigned bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -152,7 +148,7 @@ jobs:
       # + staging live in TateYoko.Pack (single source of truth).
       - name: Stage first-party binaries for signing
         if: env.HAVE_SIGNING == 'true'
-        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- sign-stage
+        run: mise exec -- just sign-stage
 
       - name: Sign staged binaries (SSL.com eSigner)
         if: env.HAVE_SIGNING == 'true'
@@ -172,7 +168,7 @@ jobs:
 
       - name: Copy signed binaries back into the bundle
         if: env.HAVE_SIGNING == 'true'
-        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- sign-collect
+        run: mise exec -- just sign-collect
 
       # Never ship a "signed" build that is silently unsigned, untimestamped, or
       # signed by the wrong cert (chain + RFC 3161 timestamp + signer subject).
@@ -248,7 +244,7 @@ jobs:
       # Zip + checksum the (now-signed) bundle -> publish\package\.
       - name: Package (zip + checksums)
         shell: bash
-        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- package --version "${TAG#v}"
+        run: mise exec -- just package version="${TAG#v}"
 
       # Keyless build-provenance for the published artifacts (no stored secrets).
       - name: Attest build provenance
