@@ -1,14 +1,22 @@
 # release-please — the version / CHANGELOG / tag bot.
 #
 # Conventional Commits land on main -> this action keeps a "Release PR" open that
-# bumps the version and updates CHANGELOG.md. Merging that PR makes release-please
-# create the GitHub Release as a DRAFT (config "draft": true) and the vX.Y.Z tag;
-# this workflow then dispatches release.yml, which builds -> signs -> attaches
+# bumps the version and updates CHANGELOG.md. Merging that PR (squash) makes
+# release-please create the GitHub Release as a DRAFT (config "draft": true) and
+# the vX.Y.Z tag, then dispatch release.yml, which builds -> signs -> attaches
 # assets to the draft -> publishes it. Humans never hand-pick a version.
 #
-# Runs with the default GITHUB_TOKEN (no GitHub App needed): the bot commit + PR
-# are authored by github-actions[bot]. A GITHUB_TOKEN workflow_dispatch IS allowed
-# to start release.yml (the documented recursion-guard exception). See docs/RELEASING.md.
+# Runs as a GitHub App (actions/create-github-app-token) rather than the default
+# GITHUB_TOKEN. This is REQUIRED because main is protected by a ruleset that needs
+# the `test` check to pass before a PR can merge: a GITHUB_TOKEN-opened PR does NOT
+# trigger CI (GitHub's recursion guard), so its required check would never run and
+# the Release PR could never merge. An App-token PR does trigger CI. The App also
+# gives the release commit + tag a signed, first-class identity. The release.yml
+# dispatch still uses GITHUB_TOKEN — a workflow_dispatch is the one event it may start.
+#
+# Dormant until configured: with the App secrets unset the job runs green and
+# no-ops. The secrets live in the `release-please` environment (deployment-branch
+# policy: main only, no required reviewers — it must run unattended). See docs/RELEASING.md.
 name: release-please
 
 on:
@@ -27,22 +35,39 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: release-please
     permissions:
       contents: write # create the release commit + draft Release + tag
       pull-requests: write # open / maintain the Release PR
       actions: write # dispatch release.yml once the draft Release is created
+    env:
+      # Server-side boolean — never exposes the secret values.
+      HAS_APP: ${{ secrets.RELEASE_PLEASE_CLIENT_ID != '' && secrets.RELEASE_PLEASE_PRIVATE_KEY != '' }}
     steps:
-      - id: rp
+      # Mint a short-lived installation token scoped to this repo. Its PRs DO
+      # trigger CI (unlike GITHUB_TOKEN's), so the Release PR's required `test`
+      # check runs and the PR becomes mergeable.
+      - name: Mint GitHub App token
+        id: app-token
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
+
+      - name: release-please (active)
+        id: rp
+        if: env.HAS_APP == 'true'
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
       # The draft Release fires no `release` event, so explicitly kick off the
       # signed build. Publishing (in release.yml) is what makes the release public.
       - name: Trigger the signed-release build
-        if: ${{ steps.rp.outputs.release_created == 'true' }}
+        if: ${{ env.HAS_APP == 'true' && steps.rp.outputs.release_created == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -51,3 +76,10 @@ jobs:
         run: |
           gh workflow run release.yml --repo "$REPO" --ref main \
             -f tag_name="$TAG" -f sha="$SHA" -f publish=true
+
+      - name: release-please (dormant — App not configured)
+        if: env.HAS_APP != 'true'
+        run: |
+          echo "::notice::release-please is dormant — create a GitHub App and set"
+          echo "RELEASE_PLEASE_CLIENT_ID + RELEASE_PLEASE_PRIVATE_KEY in the"
+          echo "release-please environment to activate. See docs/RELEASING.md."
