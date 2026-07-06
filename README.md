@@ -17,16 +17,20 @@ shows the pages in the correct order. A single-purpose tool for comfortable read
 
 ## Architecture
 
-A hexagonal design in three projects. Dependencies point inward (`Core` depends on neither PDF nor UI).
+A hexagonal design in four projects. Dependencies point inward (`Core` depends on neither PDF nor UI).
 
 ```
-TateYoko.Core   Pure domain + use cases (PageDimension / Pagination /
-                SpreadLayoutCalculator / SpreadConversionService). No PDF/UI dependency.
-TateYoko.Pdf    Infrastructure. Implements Core's ports with PDFsharp (the only layer that depends on PDF).
-TateYoko.App    WinUI 3 (unpackaged) + composition root. MVVM (CommunityToolkit.Mvvm) + DI.
+TateYoko.Core         Pure domain + use cases (PageDimension / Pagination /
+                      SpreadLayoutCalculator / SpreadConversionService). No PDF/UI dependency.
+TateYoko.Pdf          Infrastructure. Implements Core's ports with PDFsharp (the only layer that depends on PDF).
+TateYoko.Presentation Presentation logic (MainViewModel state machine) over Core, behind small
+                      abstractions (IUiDispatcher / IUiStrings / IShellLauncher). No WinUI dependency.
+TateYoko.App          WinUI 3 (unpackaged) + composition root. Supplies the WinUI adapters for the
+                      presentation abstractions. MVVM (CommunityToolkit.Mvvm) + DI.
 ```
 
-The boundary is enforced at compile time: Core does not reference PDFsharp.
+The boundary is enforced at compile time: neither `Core` nor `Presentation` references PDFsharp or
+WinUI, which keeps the domain and the view-model state machine unit-testable off the UI thread.
 
 ## Distribution
 
@@ -51,7 +55,7 @@ The toolchain is managed with **mise** (`mise install` sets up the .NET SDK).
 
 ```sh
 mise install
-mise exec -- dotnet test TateYoko.slnx          # all tests (Core unit + PDF integration)
+mise exec -- dotnet test TateYoko.slnx          # all tests (Core unit + PDF integration + ViewModel state machine)
 mise exec -- dotnet run --project src/TateYoko.App   # run in development (unpackaged)
 mise run publish                                 # assemble the distribution bundle into publish/
 mise run icons                                   # regenerate icon assets from assets/AppIcon.png
@@ -88,7 +92,7 @@ sha256sum -c SHA256SUMS.txt
 | MVVM | CommunityToolkit.Mvvm |
 | DI | Microsoft.Extensions.DependencyInjection |
 | PDF | PDFsharp 6.x (MIT) |
-| Tests | xUnit |
+| Tests | xUnit, NSubstitute (fakes), CsCheck (property-based invariants) |
 
 ## License
 

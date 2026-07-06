@@ -42,4 +42,50 @@ internal static class SamplePdf
             .ToList();
         Create(path, pages);
     }
+
+    /// <summary>Creates a portrait PDF whose document information is populated via <paramref name="setInfo"/>.</summary>
+    internal static void CreateWithMetadata(string path, Action<PdfDocumentInformation> setInfo, int pageCount = 2)
+    {
+        using var doc = new PdfDocument();
+        for (int i = 0; i < pageCount; i++)
+        {
+            PdfPage page = doc.AddPage();
+            page.Width = XUnit.FromPoint(200);
+            page.Height = XUnit.FromPoint(400);
+        }
+
+        setInfo(doc.Info);
+        doc.Save(path);
+    }
+
+    /// <summary>Creates a one-page PDF whose CropBox is smaller than its MediaBox, optionally rotated.</summary>
+    internal static void CreateWithCropBox(string path, double mediaW, double mediaH, double cropW, double cropH, int rotate = 0)
+    {
+        using var doc = new PdfDocument();
+        PdfPage page = doc.AddPage();
+        page.Width = XUnit.FromPoint(mediaW);
+        page.Height = XUnit.FromPoint(mediaH);
+        page.CropBox = new PdfRectangle(new XPoint(0, 0), new XPoint(cropW, cropH));
+        page.Rotate = rotate;
+        doc.Save(path);
+    }
+
+    /// <summary>Creates a password-protected (encrypted) PDF requiring <paramref name="userPassword"/> to open.</summary>
+    internal static void CreateEncrypted(string path, string userPassword, int pageCount = 2)
+    {
+        using var doc = new PdfDocument();
+        for (int i = 0; i < pageCount; i++)
+        {
+            PdfPage page = doc.AddPage();
+            page.Width = XUnit.FromPoint(200);
+            page.Height = XUnit.FromPoint(400);
+        }
+
+        doc.SecuritySettings.UserPassword = userPassword;
+        doc.Save(path);
+    }
+
+    /// <summary>Writes bytes that are not a readable PDF, to exercise the corrupted-file path.</summary>
+    internal static void CreateCorrupted(string path) =>
+        File.WriteAllText(path, "%PDF-1.5\nnot a real pdf body — missing xref and trailer\n");
 }

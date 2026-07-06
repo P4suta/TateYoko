@@ -50,6 +50,11 @@
   <ItemGroup>
     <ProjectReference Include="..\TateYoko.Core\TateYoko.Core.csproj" />
     <ProjectReference Include="..\TateYoko.Pdf\TateYoko.Pdf.csproj" />
+    <ProjectReference Include="..\TateYoko.Presentation\TateYoko.Presentation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TateYoko.App.Tests" />
   </ItemGroup>
 
   <!--
