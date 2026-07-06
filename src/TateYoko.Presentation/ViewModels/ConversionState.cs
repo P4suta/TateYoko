@@ -1,4 +1,4 @@
-namespace TateYoko.App.ViewModels;
+namespace TateYoko.Presentation.ViewModels;
 
 /// <summary>Display state of the single screen.</summary>
 public enum ConversionState

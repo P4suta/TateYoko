@@ -94,12 +94,15 @@ internal sealed class PdfSharpSourceDocument : ISourceDocument
         {
             return PdfReader.Open(path, PdfDocumentOpenMode.Import);
         }
-        catch (PdfReaderException e) when (IsPasswordError(e))
+        catch (Exception e) when (IsPasswordError(e))
         {
             throw new SpreadException(ErrorKind.PdfPasswordProtected, path, e);
         }
-        catch (Exception e) when (e is PdfReaderException or InvalidOperationException or IOException)
+        catch (Exception e)
         {
+            // PDFsharp reports parse failures inconsistently (PdfReaderException, InvalidOperationException,
+            // IOException, or a bare Exception such as "StartXRef table could not be found"). Any failure
+            // to open a file that exists means it is unreadable/corrupted.
             throw new SpreadException(ErrorKind.PdfCorrupted, path, e);
         }
     }
