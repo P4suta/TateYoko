@@ -29,7 +29,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Assets\AppIcon.ico" />
+    <!--
+      The window/title-bar icon is loaded from this loose file at runtime (AppWindow.SetIcon +
+      TitleBar.IconSource), so it must sit next to the app in both the build and publish output.
+      The tile / splash / store logos below are MSIX manifest assets, unused by this unpackaged
+      build, but kept so `mise run icons` has a stable set to regenerate.
+    -->
+    <Content Include="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.scale-200.png" />
     <Content Include="Assets\StoreLogo.png" />
@@ -69,5 +75,19 @@
       DestinationFolder="$(PublishDir)"
       SkipUnchangedFiles="true"
       Condition="Exists('$(OutDir)$(AssemblyName).pri')" />
+  </Target>
+
+  <!--
+    Same publish quirk as the PRI above: dotnet publish of the unpackaged app drops the loose
+    Assets\ content, leaving the window icon (AppWindow.SetIcon) and the title-bar icon
+    (TitleBar.IconSource, ms-appx:///Assets/AppIcon.ico) with no file to load in the shipped
+    bundle. Copy the icon from the build output into the publish output.
+  -->
+  <Target Name="CopyAppIconToPublishDir" AfterTargets="Publish">
+    <Copy
+      SourceFiles="$(OutDir)Assets\AppIcon.ico"
+      DestinationFolder="$(PublishDir)Assets"
+      SkipUnchangedFiles="true"
+      Condition="Exists('$(OutDir)Assets\AppIcon.ico')" />
   </Target>
 </Project>
