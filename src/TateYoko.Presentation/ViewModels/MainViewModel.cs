@@ -1,26 +1,38 @@
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.UI.Dispatching;
-using TateYoko.App.Services;
 using TateYoko.Core.Application;
 using TateYoko.Core.Domain;
+using TateYoko.Presentation.Abstractions;
 
-namespace TateYoko.App.ViewModels;
+namespace TateYoko.Presentation.ViewModels;
 
 /// <summary>
 /// ViewModel for the single screen. Delegates conversion to <see cref="SpreadConversionService"/>
-/// and marshals progress (<see cref="IConversionProgress"/>) back to the UI thread.
+/// and marshals progress (<see cref="IConversionProgress"/>) back to the UI thread. Platform
+/// concerns (UI thread, resource strings, shell launching) are injected as abstractions so the
+/// state machine can be unit tested off the UI thread.
 /// </summary>
 public partial class MainViewModel : ObservableObject, IConversionProgress
 {
     private readonly SpreadConversionService _service;
-    private readonly DispatcherQueue _dispatcher;
+    private readonly IUiDispatcher _dispatcher;
+    private readonly IUiStrings _strings;
+    private readonly IShellLauncher _shell;
 
-    public MainViewModel(SpreadConversionService service)
+    public MainViewModel(
+        SpreadConversionService service,
+        IUiDispatcher dispatcher,
+        IUiStrings strings,
+        IShellLauncher shell)
     {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(dispatcher);
+        ArgumentNullException.ThrowIfNull(strings);
+        ArgumentNullException.ThrowIfNull(shell);
         _service = service;
-        _dispatcher = DispatcherQueue.GetForCurrentThread();
+        _dispatcher = dispatcher;
+        _strings = strings;
+        _shell = shell;
     }
 
     [ObservableProperty]
@@ -76,7 +88,7 @@ public partial class MainViewModel : ObservableObject, IConversionProgress
 
         if (!path.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
         {
-            ErrorMessage = ErrorMessages.NotPdf;
+            ErrorMessage = _strings.NotPdf;
             State = ConversionState.Error;
             return;
         }
@@ -99,7 +111,7 @@ public partial class MainViewModel : ObservableObject, IConversionProgress
         var request = new SpreadRequest(InputPath, OutputPath, SelectedMode);
         ProgressIndeterminate = true;
         ProgressValue = 0;
-        ProgressText = Localized.Get("ProgressStarting");
+        ProgressText = _strings.ProgressStarting;
         State = ConversionState.Converting;
 
         try
@@ -109,21 +121,21 @@ public partial class MainViewModel : ObservableObject, IConversionProgress
         }
         catch (SpreadException ex)
         {
-            ErrorMessage = ErrorMessages.ForKind(ex.Kind);
+            ErrorMessage = _strings.ForError(ex.Kind);
             State = ConversionState.Error;
         }
         catch (Exception)
         {
-            ErrorMessage = ErrorMessages.ForKind(ErrorKind.Internal);
+            ErrorMessage = _strings.ForError(ErrorKind.Internal);
             State = ConversionState.Error;
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenOutput))]
-    private void OpenOutput() => LaunchShell(OutputPath!, selectInFolder: false);
+    private void OpenOutput() => _shell.Open(OutputPath!);
 
     [RelayCommand(CanExecute = nameof(CanOpenOutput))]
-    private void ShowInFolder() => LaunchShell(OutputPath!, selectInFolder: true);
+    private void ShowInFolder() => _shell.ShowInFolder(OutputPath!);
 
     [RelayCommand]
     private void Reset()
@@ -141,11 +153,11 @@ public partial class MainViewModel : ObservableObject, IConversionProgress
     /// <summary>Marshals progress reported from a background thread onto the UI thread.</summary>
     public void Report(int completedSpreads, int totalSpreads)
     {
-        _dispatcher.TryEnqueue(() =>
+        _dispatcher.Post(() =>
         {
             ProgressIndeterminate = false;
             ProgressValue = totalSpreads == 0 ? 0 : (double)completedSpreads / totalSpreads * 100;
-            ProgressText = Localized.Get("ProgressFormat", completedSpreads, totalSpreads);
+            ProgressText = _strings.ProgressFormat(completedSpreads, totalSpreads);
         });
     }
 
@@ -159,29 +171,19 @@ public partial class MainViewModel : ObservableObject, IConversionProgress
 
     private bool CanOpenOutput() => OutputPath is not null && File.Exists(OutputPath);
 
-    private FirstPageMode SelectedMode => SelectedOpeningIndex switch
+    /// <summary>Maps the opening-selector index to the pairing mode.</summary>
+    internal FirstPageMode SelectedMode => SelectedOpeningIndex switch
     {
         1 => FirstPageMode.Cover,
         2 => FirstPageMode.LeadingBlank,
         _ => FirstPageMode.Standard,
     };
 
-    private static string DeriveOutputPath(string input)
+    /// <summary>Derives the output path (<c>&lt;name&gt;_spread.pdf</c>) next to the input.</summary>
+    internal static string DeriveOutputPath(string input)
     {
         string dir = Path.GetDirectoryName(input) ?? ".";
         string name = Path.GetFileNameWithoutExtension(input);
         return Path.Combine(dir, $"{name}_spread.pdf");
-    }
-
-    private static void LaunchShell(string path, bool selectInFolder)
-    {
-        if (selectInFolder)
-        {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
-        }
-        else
-        {
-            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-        }
     }
 }

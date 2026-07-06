@@ -27,11 +27,15 @@ mise run icons                                         # regenerate icon assets 
 
 ## Architecture rules
 
-TateYoko is a **hexagonal** design (see the README). The one rule that matters:
+TateYoko is a **hexagonal** design (see the README). The rules that matter:
 
 - **`TateYoko.Core` depends on neither PDFsharp nor WinUI.** The domain is pure;
   PDF work lives in `TateYoko.Pdf`, UI in `TateYoko.App`. Don't add a PDF or UI
   reference to `Core` — put the logic behind a port instead.
+- **`TateYoko.Presentation` depends only on `Core`** (plus CommunityToolkit.Mvvm),
+  never on WinUI or PDFsharp. Platform concerns reach it through the abstractions
+  (`IUiDispatcher` / `IUiStrings` / `IShellLauncher`), whose WinUI adapters live in
+  `TateYoko.App`. This keeps the view-model state machine unit-testable off the UI thread.
 
 ## Pull requests
 

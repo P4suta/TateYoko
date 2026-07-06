@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
-using TateYoko.App.ViewModels;
+using TateYoko.App.Services;
 using TateYoko.Core.Application;
 using TateYoko.Core.Ports;
 using TateYoko.Pdf;
+using TateYoko.Presentation.Abstractions;
+using TateYoko.Presentation.ViewModels;
 
 namespace TateYoko.App;
 
@@ -45,6 +47,13 @@ public partial class App : Application
         // The only PDF dependency: the injection point at the composition root.
         services.AddSingleton<IPdfEngine, PdfSharpEngine>();
         services.AddSingleton<SpreadConversionService>();
+
+        // WinUI adapters for the presentation abstractions.
+        services.AddSingleton<IUiStrings, ResourceUiStrings>();
+        services.AddSingleton<IShellLauncher, ShellLauncher>();
+        // Captured on the UI thread at resolve time so Post() can marshal back to it from background work.
+        services.AddTransient<IUiDispatcher>(_ =>
+            new WinUiDispatcher(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()));
         services.AddTransient<MainViewModel>();
 
         return services.BuildServiceProvider();
