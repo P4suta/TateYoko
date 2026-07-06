@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Microsoft.UI.Xaml;
 
 namespace TateYoko.App;
@@ -15,7 +17,11 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
 
-        AppWindow.SetIcon("Assets/AppIcon.ico");
+        // AppWindow.SetIcon takes a file-system path (not an ms-appx URI), so resolve it against
+        // the app folder rather than the process CWD: the launcher (TateYoko.exe) starts us with an
+        // arbitrary working directory, and dotnet publish drops loose Assets\ unless we copy them
+        // back (see CopyAppIconToPublishDir in the .csproj).
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
 
         RootFrame.Navigate(typeof(MainPage));
     }
