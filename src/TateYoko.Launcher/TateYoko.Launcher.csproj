@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Native launcher for the distribution bundle (TateYoko.exe): the single exe the user runs at the
+    bundle root. A tiny program that spawns the neighboring app\TateYoko.App.exe and forwards args.
+
+    The .NET apphost resolves its DLLs/deps.json only from its own directory, so the app's publish
+    output (~350 files) is confined to app\ and the root holds just this launcher and the README.
+
+    NativeAOT produces a true native exe, so building requires Visual Studio C++ build tools
+    (MSVC linker + Windows SDK).
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <AssemblyName>TateYoko</AssemblyName>
+    <AssemblyTitle>縦横 (TateYoko)</AssemblyTitle>
+    <Product>縦横 (TateYoko)</Product>
+    <ApplicationIcon>..\TateYoko.App\Assets\AppIcon.ico</ApplicationIcon>
+
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <StackTraceSupport>false</StackTraceSupport>
+  </PropertyGroup>
+</Project>

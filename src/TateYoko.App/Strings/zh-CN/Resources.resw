@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IdleHeading.Text" xml:space="preserve">
+    <value>拖入PDF</value>
+  </data>
+  <data name="OpeningStandard.Content" xml:space="preserve">
+    <value>从右</value>
+  </data>
+  <data name="OpeningCover.Content" xml:space="preserve">
+    <value>封面单独</value>
+  </data>
+  <data name="OpeningLeadingBlank.Content" xml:space="preserve">
+    <value>从左</value>
+  </data>
+  <data name="ConvertButton.Content" xml:space="preserve">
+    <value>生成跨页</value>
+  </data>
+  <data name="PickAnotherButton.Content" xml:space="preserve">
+    <value>选择其他PDF</value>
+  </data>
+  <data name="DoneHeading.Text" xml:space="preserve">
+    <value>已生成跨页</value>
+  </data>
+  <data name="OpenButton.Content" xml:space="preserve">
+    <value>打开</value>
+  </data>
+  <data name="ShowFolderButton.Text" xml:space="preserve">
+    <value>在文件夹中显示</value>
+  </data>
+  <data name="AnotherBookButton.Content" xml:space="preserve">
+    <value>再来一本</value>
+  </data>
+  <data name="ErrorBackButton.Content" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="DropOverlayText.Text" xml:space="preserve">
+    <value>拖放到此处</value>
+  </data>
+  <data name="DragCaption" xml:space="preserve">
+    <value>要生成跨页的PDF</value>
+  </data>
+  <data name="ProgressStarting" xml:space="preserve">
+    <value>转换中…</value>
+  </data>
+  <data name="ProgressFormat" xml:space="preserve">
+    <value>{0} / {1} 跨页</value>
+  </data>
+  <data name="NotPdf" xml:space="preserve">
+    <value>请选择PDF文件。</value>
+  </data>
+  <data name="ErrorPdfCorrupted" xml:space="preserve">
+    <value>PDF已损坏或无法读取。请确认能否用其他阅读器打开。</value>
+  </data>
+  <data name="ErrorPdfPasswordProtected" xml:space="preserve">
+    <value>无法转换受密码保护的PDF。请解除保护后重试。</value>
+  </data>
+  <data name="ErrorPdfNotFound" xml:space="preserve">
+    <value>未找到文件。</value>
+  </data>
+  <data name="ErrorPdfInvalidPage" xml:space="preserve">
+    <value>无法读取页面。请检查输入的PDF。</value>
+  </data>
+  <data name="ErrorPdfWriteFailed" xml:space="preserve">
+    <value>无法写入输出。请检查写入权限和可用空间。</value>
+  </data>
+  <data name="ErrorInvalidParameter" xml:space="preserve">
+    <value>设置不正确。</value>
+  </data>
+  <data name="ErrorInternal" xml:space="preserve">
+    <value>发生了意外错误。</value>
+  </data>
+</root>

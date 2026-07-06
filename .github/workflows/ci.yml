@@ -1,0 +1,42 @@
+# CI: build + test on every push to main and every PR.
+#
+# WinUI 3 and the NativeAOT launcher are Windows-only, so the whole solution is
+# built on windows-latest. `dotnet test` builds in Debug and does NOT invoke the
+# NativeAOT compiler (that only runs at publish), so MSVC is not needed here — the
+# heavy AOT + self-contained publish lives in release.yml. The toolchain (.NET 10)
+# is provisioned from mise.toml so CI uses the exact pinned SDK.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded PR runs; never cancel main.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # Provisions the pinned toolchain (.NET 10) from mise.toml.
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install: true
+
+      # Builds the whole solution (Core, Pdf, App/WinUI, Launcher, tools) and runs
+      # the Core unit tests + Pdf integration tests.
+      - name: Test
+        run: mise exec -- dotnet test TateYoko.slnx -c Release

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TateYoko.App/TateYoko.App.csproj" />
+    <Project Path="src/TateYoko.Launcher/TateYoko.Launcher.csproj" />
+    <Project Path="src/TateYoko.Core/TateYoko.Core.csproj" />
+    <Project Path="src/TateYoko.Pdf/TateYoko.Pdf.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TateYoko.Core.Tests/TateYoko.Core.Tests.csproj" />
+    <Project Path="tests/TateYoko.Pdf.Tests/TateYoko.Pdf.Tests.csproj" />
+  </Folder>
+</Solution>

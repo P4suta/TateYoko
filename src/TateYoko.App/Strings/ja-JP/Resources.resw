@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IdleHeading.Text" xml:space="preserve">
+    <value>PDFをドロップ</value>
+  </data>
+  <data name="OpeningStandard.Content" xml:space="preserve">
+    <value>右から</value>
+  </data>
+  <data name="OpeningCover.Content" xml:space="preserve">
+    <value>表紙単独</value>
+  </data>
+  <data name="OpeningLeadingBlank.Content" xml:space="preserve">
+    <value>左から</value>
+  </data>
+  <data name="ConvertButton.Content" xml:space="preserve">
+    <value>見開きにする</value>
+  </data>
+  <data name="PickAnotherButton.Content" xml:space="preserve">
+    <value>別のPDFを選ぶ</value>
+  </data>
+  <data name="DoneHeading.Text" xml:space="preserve">
+    <value>見開きにしました</value>
+  </data>
+  <data name="OpenButton.Content" xml:space="preserve">
+    <value>開く</value>
+  </data>
+  <data name="ShowFolderButton.Text" xml:space="preserve">
+    <value>フォルダを表示</value>
+  </data>
+  <data name="AnotherBookButton.Content" xml:space="preserve">
+    <value>もう1冊</value>
+  </data>
+  <data name="ErrorBackButton.Content" xml:space="preserve">
+    <value>戻る</value>
+  </data>
+  <data name="DropOverlayText.Text" xml:space="preserve">
+    <value>ここにドロップ</value>
+  </data>
+  <data name="DragCaption" xml:space="preserve">
+    <value>見開きにする PDF</value>
+  </data>
+  <data name="ProgressStarting" xml:space="preserve">
+    <value>変換中…</value>
+  </data>
+  <data name="ProgressFormat" xml:space="preserve">
+    <value>{0} / {1} 見開き</value>
+  </data>
+  <data name="NotPdf" xml:space="preserve">
+    <value>PDF ファイルを選んでください。</value>
+  </data>
+  <data name="ErrorPdfCorrupted" xml:space="preserve">
+    <value>PDF が壊れているか、読み込めませんでした。別のビューアで開けるか確認してください。</value>
+  </data>
+  <data name="ErrorPdfPasswordProtected" xml:space="preserve">
+    <value>パスワード保護された PDF は変換できません。保護を解除してからお試しください。</value>
+  </data>
+  <data name="ErrorPdfNotFound" xml:space="preserve">
+    <value>ファイルが見つかりませんでした。</value>
+  </data>
+  <data name="ErrorPdfInvalidPage" xml:space="preserve">
+    <value>ページを読み取れませんでした。入力 PDF を確認してください。</value>
+  </data>
+  <data name="ErrorPdfWriteFailed" xml:space="preserve">
+    <value>出力先に書き込めませんでした。書き込み権限や空き容量を確認してください。</value>
+  </data>
+  <data name="ErrorInvalidParameter" xml:space="preserve">
+    <value>設定が正しくありません。</value>
+  </data>
+  <data name="ErrorInternal" xml:space="preserve">
+    <value>予期しないエラーが発生しました。</value>
+  </data>
+</root>

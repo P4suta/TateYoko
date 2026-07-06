@@ -1,0 +1,50 @@
+name: Verify signatures
+description: >
+  Verify every first-party PE in the bundle is Authenticode-signed with a valid
+  chain, carries an RFC 3161 timestamp, and is signed by the expected certificate.
+  Fails if any check fails. Shared by the sign self-check and the publish gate so
+  they cannot drift.
+
+inputs:
+  bundle-dir:
+    description: Path to the assembled bundle (the publish\win-x64 root).
+    required: true
+  signer-subject-contains:
+    description: Substring the signer certificate's subject must contain (e.g. "CN=...").
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: pwsh
+      env:
+        BUNDLE_DIR: ${{ inputs.bundle-dir }}
+        SIGNER_SUBJECT: ${{ inputs.signer-subject-contains }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        # Keep in sync with TateYoko.Pack `FirstPartyPes` (tools/TateYoko.Pack/Program.cs).
+        $rel = @(
+          'TateYoko.exe',
+          'app/TateYoko.App.exe',
+          'app/TateYoko.App.dll',
+          'app/TateYoko.Core.dll',
+          'app/TateYoko.Pdf.dll'
+        )
+        $fail = $false
+        foreach ($r in $rel) {
+          $p = Join-Path $env:BUNDLE_DIR $r
+          if (-not (Test-Path $p)) { Write-Host "::error::missing: $p"; $fail = $true; continue }
+          $sig = Get-AuthenticodeSignature $p
+          if ($sig.Status -ne 'Valid') {
+            Write-Host "::error::$r not validly signed: $($sig.Status) - $($sig.StatusMessage)"; $fail = $true; continue
+          }
+          if (-not $sig.TimeStamperCertificate) {
+            Write-Host "::error::$r has no RFC 3161 timestamp"; $fail = $true; continue
+          }
+          $subject = $sig.SignerCertificate.Subject
+          if ($subject -notlike "*$($env:SIGNER_SUBJECT)*") {
+            Write-Host "::error::$r signed by unexpected cert: $subject"; $fail = $true; continue
+          }
+          Write-Host "ok: $r  ($subject)"
+        }
+        if ($fail) { throw "signature verification failed" }

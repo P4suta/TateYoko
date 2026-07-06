@@ -1,0 +1,37 @@
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+ARM64/
+publish/
+*.user
+*.suo
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.DotSettings.user
+
+# Generated / MSIX
+*.msix
+*.appx
+AppPackages/
+BundleArtifacts/
+Generated Files/
+
+# Test results
+[Tt]est[Rr]esults/
+*.trx
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Internal working notes / agent state — never publish
+.claude/
+CLAUDE.md
+
+# SBOM output (release.yml writes build/sbom/)
+build/

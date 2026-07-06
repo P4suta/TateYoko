@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # C# projects — one nuget entry covering every project directory via globs.
+  # Grouped so a week's bumps arrive as a single PR rather than one per package.
+  - package-ecosystem: nuget
+    directories:
+      - "/src/*"
+      - "/tests/*"
+      - "/tools/*"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      dotnet:
+        patterns: ["*"]
+    commit-message:
+      prefix: build
+
+  # The workflow actions themselves (keeps the SHA pins current).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

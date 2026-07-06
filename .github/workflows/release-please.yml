@@ -1,0 +1,53 @@
+# release-please — the version / CHANGELOG / tag bot.
+#
+# Conventional Commits land on main -> this action keeps a "Release PR" open that
+# bumps the version and updates CHANGELOG.md. Merging that PR makes release-please
+# create the GitHub Release as a DRAFT (config "draft": true) and the vX.Y.Z tag;
+# this workflow then dispatches release.yml, which builds -> signs -> attaches
+# assets to the draft -> publishes it. Humans never hand-pick a version.
+#
+# Runs with the default GITHUB_TOKEN (no GitHub App needed): the bot commit + PR
+# are authored by github-actions[bot]. A GITHUB_TOKEN workflow_dispatch IS allowed
+# to start release.yml (the documented recursion-guard exception). See docs/RELEASING.md.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the release commit + draft Release + tag
+      pull-requests: write # open / maintain the Release PR
+      actions: write # dispatch release.yml once the draft Release is created
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # The draft Release fires no `release` event, so explicitly kick off the
+      # signed build. Publishing (in release.yml) is what makes the release public.
+      - name: Trigger the signed-release build
+        if: ${{ steps.rp.outputs.release_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.rp.outputs.tag_name }}
+          SHA: ${{ steps.rp.outputs.sha }}
+        run: |
+          gh workflow run release.yml --repo "$REPO" --ref main \
+            -f tag_name="$TAG" -f sha="$SHA" -f publish=true

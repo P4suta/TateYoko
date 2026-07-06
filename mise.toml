@@ -1,0 +1,28 @@
+# Toolchain managed by mise; `mise install` sets up the environment.
+[tools]
+dotnet = "10.0.300"
+
+# Host-side helper (Git hooks). Not needed for the build itself.
+lefthook = "latest"
+
+[settings]
+# Allow the dotnet backend's symlink strategy.
+experimental = true
+
+# Build the whole solution and run the tests (Core unit + Pdf integration).
+[tasks.test]
+description = "Build and run all tests"
+run = "dotnet test TateYoko.slnx"
+
+# Assemble the distribution bundle (launcher at the root + app body in app\ + zip/checksum).
+# Orchestrated by a C# tool rather than a shell script. The NativeAOT launcher requires
+# VS C++ build tools. The release pipeline calls finer-grained subcommands
+# (bundle / package / sign-stage / sign-collect); the bare tool run does bundle + package.
+[tasks.publish]
+description = "Assemble the distribution bundle into publish/"
+run = "dotnet run --project tools/TateYoko.Pack"
+
+# Regenerate the app icon assets (AppIcon.ico + logo PNGs) from assets/AppIcon.png.
+[tasks.icons]
+description = "Regenerate app icon assets from assets/AppIcon.png"
+run = "dotnet run --project tools/TateYoko.Icons"

@@ -1,0 +1,277 @@
+# Signed release: build -> sign -> publish, split into three jobs so the signing
+# credentials touch the smallest possible surface.
+#
+#   build   -> assembles the distributable bundle (Pack `bundle`) + a CycloneDX
+#              SBOM, uploads them as artifacts. Holds NO secrets, read-only token.
+#   sign    -> Authenticode-signs our own five PE files with SSL.com eSigner via
+#              the official SSLcom/esigner-codesign Action (batch_sign, SHA-pinned).
+#              The only job that sees the signing secrets, so it runs in the
+#              approval-gated `release` environment. Dormant until secrets are set:
+#              with none configured it passes the bundle through UNSIGNED + a warning.
+#   publish -> zips + checksums the (signed) bundle (Pack `package`), writes keyless
+#              build-provenance + SBOM attestations (Sigstore via the OIDC
+#              GITHUB_TOKEN), and attaches everything to the release-please draft,
+#              then publishes it. When signing secrets ARE present it hard-verifies
+#              the bundle is signed before the irreversible Release step.
+#
+# The first-party PE list, staging, and packaging all live in tools/TateYoko.Pack
+# (a C# tool) so the release logic is typed and testable, not shell. Signing setup
+# and rationale: docs/SIGNING.md. Release flow: docs/RELEASING.md.
+#
+# Verify a download with: gh attestation verify <zip> --repo P4suta/TateYoko
+name: release
+
+on:
+  # Dispatched by release-please.yml once it creates the DRAFT release; the tag it
+  # created does not fire a `push: tags` event (GITHUB_TOKEN-made refs never do), so
+  # dispatch is the trigger. Also runnable by hand for a signing smoke test
+  # (publish=false builds + signs + verifies but creates no Release).
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Version tag to release (e.g. v0.1.0), or a branch/ref for a publish=false signing test"
+        required: true
+        type: string
+      sha:
+        description: "Commit SHA to build from (release-please passes the release commit; omit to build from tag_name)"
+        required: false
+        type: string
+      publish:
+        description: "Publish the GitHub Release (false = build+sign+verify only, no release/attestations)"
+        required: false
+        default: true
+        type: boolean
+
+# One release per ref at a time; never cancel mid-sign/mid-publish.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ inputs.tag_name }}
+  # Build from the release commit SHA when dispatched (the tag may not exist yet);
+  # fall back to tag_name for a manual branch smoke test.
+  REF: ${{ inputs.sha || inputs.tag_name }}
+  # Our SSL.com IV certificate's subject — asserted at verify time so a different
+  # (even validly-chained) certificate cannot pass silently. Same cert as find-my-files.
+  SIGNER_SUBJECT_CONTAINS: "CN=Yasunobu Sakashita"
+
+jobs:
+  # 1) Build the distributable bundle + SBOM. No secrets.
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Validate tag for a publishing run
+        if: ${{ inputs.publish }}
+        shell: bash
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::publishing run requires a vX.Y.Z tag, got '$TAG' (use publish=false for a signing smoke test from a branch)"
+            exit 1
+          fi
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REF }}
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install: true
+
+      # NativeAOT launcher + self-contained app into publish\win-x64\ (no zip yet —
+      # the PEs are signed before packaging). windows-latest ships the VS2022 C++
+      # build tools NativeAOT needs.
+      - name: Build distributable bundle
+        shell: bash
+        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- bundle --version "${TAG#v}"
+
+      # CycloneDX SBOM of the shipped app's dependency graph (PDFsharp, Windows App
+      # SDK, MVVM, DI, + the first-party libs). Tool is intentionally unpinned until
+      # a known-good version is confirmed on the runner (see docs/RELEASING.md).
+      - name: Generate SBOM (CycloneDX)
+        shell: bash
+        run: |
+          mkdir -p build/sbom
+          dotnet tool install --global CycloneDX
+          dotnet CycloneDX src/TateYoko.App/TateYoko.App.csproj \
+            --output build/sbom --json --filename tateyoko.cdx.json --set-version "${TAG#v}"
+
+      - name: Upload unsigned bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: publish/win-x64
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom
+          path: build/sbom
+          retention-days: 1
+          if-no-files-found: error
+
+  # 2) Authenticode-sign our own PEs with SSL.com eSigner. Secrets-only -> gated env.
+  sign:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: read
+    env:
+      # secrets.* cannot be used in `if:`; hoist presence to a job-level env bool.
+      HAVE_SIGNING: ${{ secrets.ES_USERNAME != '' && secrets.CREDENTIAL_ID != '' }}
+    steps:
+      # The verify step uses a local composite action, so the repo tree must be
+      # present. Runs before the artifact download so checkout's clean does not
+      # wipe the downloaded bundle.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REF }}
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install: true
+
+      - name: Download unsigned bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: publish/win-x64
+
+      # Copy only our five first-party PEs into a flat publish\sign-stage\ dir; the
+      # bundled .NET / WinAppSDK runtime DLLs are already Microsoft-signed. The list
+      # + staging live in TateYoko.Pack (single source of truth).
+      - name: Stage first-party binaries for signing
+        if: env.HAVE_SIGNING == 'true'
+        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- sign-stage
+
+      - name: Sign staged binaries (SSL.com eSigner)
+        if: env.HAVE_SIGNING == 'true'
+        uses: SSLcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
+        with:
+          command: batch_sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}\publish\sign-stage
+          output_path: ${{ github.workspace }}\publish\signed
+          environment_name: PROD
+          # Pre-signing malware scan required by our SSL.com account; also makes the
+          # Action timestamp via SSL.com's TSA so signatures outlive the cert.
+          malware_block: "true"
+
+      - name: Copy signed binaries back into the bundle
+        if: env.HAVE_SIGNING == 'true'
+        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- sign-collect
+
+      # Never ship a "signed" build that is silently unsigned, untimestamped, or
+      # signed by the wrong cert (chain + RFC 3161 timestamp + signer subject).
+      - name: Verify signatures
+        if: env.HAVE_SIGNING == 'true'
+        uses: ./.github/actions/verify-signatures
+        with:
+          bundle-dir: publish/win-x64
+          signer-subject-contains: ${{ env.SIGNER_SUBJECT_CONTAINS }}
+
+      - name: Warn if unsigned
+        if: env.HAVE_SIGNING != 'true'
+        run: echo "::warning::Signing secrets absent - publishing UNSIGNED binaries (SmartScreen will warn end users). See docs/SIGNING.md to enable."
+
+      - name: Upload signed bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist-signed
+          path: publish/win-x64
+          retention-days: 1
+          if-no-files-found: error
+
+  # 3) Zip + checksum, attest, and attach to the Release.
+  publish:
+    needs: sign
+    if: ${{ inputs.publish }}
+    runs-on: windows-latest
+    timeout-minutes: 20
+    # Second approval gate on the irreversible Release step.
+    environment: release
+    permissions:
+      contents: write # create the GitHub Release + upload assets
+      id-token: write # OIDC token for keyless Sigstore attestations
+      attestations: write # write build-provenance + SBOM attestations
+    env:
+      HAVE_SIGNING: ${{ secrets.ES_USERNAME != '' && secrets.CREDENTIAL_ID != '' }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REF }}
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install: true
+
+      - name: Download signed bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist-signed
+          path: publish/win-x64
+
+      # If signing is configured, hard-verify at the irreversible boundary: a real
+      # publish must ship validly-signed binaries. When dormant (no secrets), the
+      # build is published UNSIGNED with a warning (the scaffold ships now, signing
+      # lights up once secrets are added).
+      - name: Require the bundle to be signed before publishing
+        if: env.HAVE_SIGNING == 'true'
+        uses: ./.github/actions/verify-signatures
+        with:
+          bundle-dir: publish/win-x64
+          signer-subject-contains: ${{ env.SIGNER_SUBJECT_CONTAINS }}
+
+      - name: Warn if publishing unsigned
+        if: env.HAVE_SIGNING != 'true'
+        run: echo "::warning::Publishing an UNSIGNED release (signing secrets absent). See docs/SIGNING.md."
+
+      - name: Download SBOM
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbom
+          path: build/sbom
+
+      # Zip + checksum the (now-signed) bundle -> publish\package\.
+      - name: Package (zip + checksums)
+        shell: bash
+        run: mise exec -- dotnet run --project tools/TateYoko.Pack -c Release -- package --version "${TAG#v}"
+
+      # Keyless build-provenance for the published artifacts (no stored secrets).
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: |
+            publish/package/TateYoko-*-win-x64.zip
+            publish/package/SHA256SUMS.txt
+
+      - name: Attest SBOM
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: publish/package/TateYoko-*-win-x64.zip
+          sbom-path: build/sbom/tateyoko.cdx.json
+
+      # release-please created this as a DRAFT with no assets/tag-publish yet.
+      # softprops uploads the files then publishes the draft (assets-before-publish,
+      # which is also what creates the vX.Y.Z tag). Notes are release-please's.
+      - name: Publish the draft release with the assets
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        with:
+          tag_name: ${{ env.TAG }}
+          files: |
+            publish/package/TateYoko-*-win-x64.zip
+            publish/package/SHA256SUMS.txt
+            build/sbom/tateyoko.cdx.json

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Build tool that regenerates the app icon assets from assets/AppIcon.png: the multi-size
+    AppIcon.ico and the MSIX logo PNGs. Uses Magick.NET (Lanczos resampling) for quality.
+    Not a product, so it is excluded from TateYoko.slnx and run via the mise icons task (dotnet run).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>TateYoko.Icons</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.14.0" />
+  </ItemGroup>
+</Project>

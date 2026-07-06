@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest an idea (please read the scope note first)
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Before you file
+
+        TateYoko is deliberately a **single-purpose tool**: it merges a
+        vertical-writing PDF into right-bound (RTL) two-page spreads, and nothing
+        more. General PDF editing (merge/split/rotate/OCR/annotate), non-RTL or
+        horizontal layouts, and cross-platform builds are **out of scope** — that
+        focus is what keeps it simple. Such requests will likely be closed.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: I've read the scope note above and believe this fits TateYoko's single purpose.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
