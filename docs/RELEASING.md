@@ -23,10 +23,30 @@ No one hand-picks a version number.
 
 ## One-time repository setup
 
-- Create a **`release` environment** (Settings → Environments) and, optionally, add
-  required reviewers so `sign`/`publish` pause for human approval.
-- Add the SSL.com eSigner secrets to that environment (see [SIGNING.md](SIGNING.md)).
-  Until they're set, releases still build and publish — **unsigned**, with a warning.
+Two environments (already created) hold the secrets, scoped to `main` only:
+
+**`release-please` — the version bot's GitHub App.** release-please runs as a
+GitHub App (not the default `GITHUB_TOKEN`) so its Release PR triggers CI: the
+branch ruleset requires the `test` check to pass before merging, and a
+`GITHUB_TOKEN`-opened PR does not run CI. Until the App is configured, the job
+no-ops with a notice.
+
+1. Create a **GitHub App** (Settings → Developer settings → GitHub Apps → New).
+   Permissions: **Contents: Read & write**, **Pull requests: Read & write**.
+   No webhook needed. Note its **Client ID** and generate a **private key**.
+2. **Install** the App on the `P4suta/TateYoko` repository.
+3. Add its credentials to the **`release-please`** environment (Settings →
+   Environments → `release-please` → Secrets):
+   - `RELEASE_PLEASE_CLIENT_ID` — the App's Client ID
+   - `RELEASE_PLEASE_PRIVATE_KEY` — the generated `.pem`, pasted whole
+4. (Optional) In each branch ruleset, add the App as a **bypass actor** if you
+   later give release-please tasks that push to `main` directly. The default
+   PR-based flow needs no bypass.
+
+**`release` — code signing.** Add the SSL.com eSigner secrets to this environment
+(see [SIGNING.md](SIGNING.md)); optionally add required reviewers so `sign`/`publish`
+pause for approval. Until the secrets are set, releases still build and publish —
+**unsigned**, with a warning.
 
 ## Manual smoke test
 
