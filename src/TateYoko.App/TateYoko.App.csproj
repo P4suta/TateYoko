@@ -50,7 +50,8 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2270" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.Segmented" Version="8.2.251219" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <!-- 10.0.8 (not 9.0.0) to satisfy QPdfNet's transitive Microsoft.Extensions.Logging 10.0.8. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
   </ItemGroup>
 
   <ItemGroup>

@@ -12,6 +12,7 @@ namespace TateYoko.Pdf;
 internal sealed class PdfSharpSpreadWriter : ISpreadWriter
 {
     private readonly PdfDocument _document = new();
+    private readonly QpdfLinearizer _linearizer = new();
     private bool _disposed;
 
     public void AddSpread(SpreadSpec spec, IReadOnlyList<PagePlacement> placements)
@@ -80,13 +81,41 @@ internal sealed class PdfSharpSpreadWriter : ISpreadWriter
 
     public void Save(string destinationPath)
     {
+        // PDFsharp cannot write a linearized ("Fast Web View") file, so save to a temp next to the
+        // destination (same volume, so the fallback move is atomic) and let qpdf linearize into the
+        // final path. If qpdf is unavailable (non-x64/x86) or fails, ship the un-linearized file.
+        string tempPath = destinationPath + ".prelinear.tmp";
         try
         {
-            _document.Save(destinationPath);
+            _document.Save(tempPath);
+
+            if (!_linearizer.TryLinearize(tempPath, destinationPath))
+            {
+                File.Move(tempPath, destinationPath, overwrite: true);
+            }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             throw new SpreadException(ErrorKind.PdfWriteFailed, destinationPath, e);
+        }
+        finally
+        {
+            TryDeleteTemp(tempPath);
+        }
+    }
+
+    private static void TryDeleteTemp(string tempPath)
+    {
+        try
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Leftover temp file is harmless; never mask the real result over cleanup.
         }
     }
 
