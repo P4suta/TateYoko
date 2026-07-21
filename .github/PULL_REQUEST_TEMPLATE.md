@@ -2,6 +2,11 @@
 
 <!-- What does this change, and why? -->
 
+## Linear
+
+Closes DEV-___
+<!-- The Linear issue this PR resolves; requires the Linear GitHub integration. -->
+
 ## Checklist
 
 - [ ] PR title follows [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `perf:`, `docs:`, …) — squash-merge uses it as the commit and in the release notes
