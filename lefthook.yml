@@ -1,0 +1,8 @@
+# Git hooks (lefthook). Install: `mise exec -- lefthook install`.
+# The commit-msg hook enforces Conventional Commits with committed, keeping the
+# input well-formed for release-please's version + CHANGELOG derivation. The PR
+# title remains the authoritative check for squash-merges.
+commit-msg:
+  commands:
+    conventional-commit:
+      run: committed --commit-file {1}

@@ -10,6 +10,8 @@ just = "1.54.0"
 
 # Host-side helper (Git hooks). Not needed for the build itself.
 lefthook = "latest"
+# Conventional Commits linter for the lefthook commit-msg hook.
+"cargo:committed" = "1"
 
 [settings]
 # Allow the dotnet backend's symlink strategy.
