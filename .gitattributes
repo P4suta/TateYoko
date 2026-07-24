@@ -1,6 +1,6 @@
 # Normalize line endings: LF in the repository, native on checkout (CRLF on
 # Windows, matching .editorconfig). Explicit binaries are never normalized.
-* text=auto
+* text=auto eol=lf
 
 # The justfile recipes run under bash; keep it LF even on Windows checkouts so
 # stray CRLFs never reach the shell.
@@ -11,3 +11,6 @@ justfile text eol=lf
 *.pdf binary
 *.zip binary
 *.snk binary
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
