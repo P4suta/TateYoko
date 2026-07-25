@@ -21,11 +21,15 @@ setup: setup-powershell
 restore:
     dotnet tool restore
     dotnet restore TateYoko.slnx
+    dotnet restore src/TateYoko.App/TateYoko.App.csproj --force-evaluate -p:DistributionMode=Portable -p:PublishReadyToRun=true
+    dotnet restore src/TateYoko.App/TateYoko.App.csproj --force-evaluate -p:DistributionMode=Msix -p:PublishReadyToRun=true
 
 # Reproduce only the committed dependency graph; CI and releases use this.
 restore-locked:
     dotnet tool restore
     dotnet restore TateYoko.slnx --locked-mode
+    dotnet restore src/TateYoko.App/TateYoko.App.csproj --locked-mode -p:DistributionMode=Portable -p:PublishReadyToRun=true
+    dotnet restore src/TateYoko.App/TateYoko.App.csproj --locked-mode -p:DistributionMode=Msix -p:PublishReadyToRun=true
 
 # Compile every product, test, and release-gate project with strict analyzers.
 build:

@@ -213,6 +213,7 @@ internal static partial class PackApplication
             string platform = architecture == "arm64" ? "ARM64" : "x64";
             string output = Path.Combine(_unsignedDirectory, "portable", runtimeIdentifier);
             Directory.CreateDirectory(output);
+            RestoreAppForDistribution("Portable", runtimeIdentifier, platform);
             Step($"Publishing portable {architecture}");
             RunProcess(
                 "dotnet",
@@ -228,6 +229,7 @@ internal static partial class PackApplication
                     output,
                     $"-p:Platform={platform}",
                     "-p:DistributionMode=Portable",
+                    "-p:PublishReadyToRun=true",
                     $"-p:Version={_options.Version}",
                     $"-p:FileVersion={AppxVersion}",
                     $"-p:InformationalVersion={_options.Version}",
@@ -287,6 +289,7 @@ internal static partial class PackApplication
             string output = Path.Combine(_unsignedDirectory, "msix", architecture);
             Directory.CreateDirectory(output);
             string releaseManifest = WriteReleaseAppxManifest(output);
+            RestoreAppForDistribution("Msix", runtimeIdentifier, platform);
             Step($"Building unsigned MSIX {architecture}");
             RunProcess(
                 "dotnet",
@@ -300,6 +303,7 @@ internal static partial class PackApplication
                     "--no-restore",
                     $"-p:Platform={platform}",
                     "-p:DistributionMode=Msix",
+                    "-p:PublishReadyToRun=true",
                     "-p:GenerateAppxPackageOnBuild=true",
                     "-p:AppxBundle=Never",
                     "-p:AppxPackageSigningEnabled=false",
@@ -329,6 +333,27 @@ internal static partial class PackApplication
 
             ValidateMsix(packages[0], architecture);
             return packages[0];
+        }
+
+        private void RestoreAppForDistribution(
+            string distributionMode,
+            string runtimeIdentifier,
+            string platform
+        )
+        {
+            Step($"Restoring {distributionMode} dependencies for {runtimeIdentifier}");
+            RunProcess(
+                "dotnet",
+                [
+                    "restore",
+                    _appProject,
+                    "--locked-mode",
+                    $"-p:Configuration={_options.Configuration}",
+                    $"-p:Platform={platform}",
+                    $"-p:DistributionMode={distributionMode}",
+                    "-p:PublishReadyToRun=true",
+                ]
+            );
         }
 
         private string WriteReleaseAppxManifest(string outputDirectory)

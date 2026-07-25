@@ -17,8 +17,10 @@ mise exec -- just ci
 
 `mise.toml`は.NET SDK、just、Git hookツールを固定し、`.config/dotnet-tools.json`は
 CycloneDXとStrykerを固定します。`just restore`はNuGet通信を行い、各プロジェクトの
-`packages.lock.json`を更新します。通常の検証とCIは`just restore-locked`を使い、
-未レビューの依存解決を許しません。
+`packages.lock.json`を更新します。Appは通常ビルド、ReadyToRun portable、ReadyToRun
+MSIXで依存グラフが異なるため、後者2つを`packages.portable.lock.json`と
+`packages.msix.lock.json`へ分離しています。通常の検証とCIは3グラフすべてに
+`just restore-locked`を使い、未レビューの依存解決を許しません。
 
 パッケージ版をローカル起動するにはWindows Developer Modeが必要です。`just run`は
 プロジェクトで固定した`Microsoft.Windows.SDK.BuildTools.WinApp`からCLIを解決するため、

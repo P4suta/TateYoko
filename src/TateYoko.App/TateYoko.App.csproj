@@ -34,7 +34,14 @@
 
         <!-- WinUI + trimming can break XAML reflection, so disable trimming. -->
         <PublishTrimmed>false</PublishTrimmed>
-        <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">true</PublishReadyToRun>
+        <!-- ReadyToRun and single-file publishing add SDK build packages that do not belong
+             to the normal build graph. Lock each real distribution graph independently. -->
+        <NuGetLockFilePath
+            Condition="'$(PublishReadyToRun)' == 'true' and '$(DistributionMode)' == 'Portable'"
+            >packages.portable.lock.json</NuGetLockFilePath>
+        <NuGetLockFilePath
+            Condition="'$(PublishReadyToRun)' == 'true' and '$(DistributionMode)' == 'Msix'"
+            >packages.msix.lock.json</NuGetLockFilePath>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(DistributionMode)' == 'Reference'">
