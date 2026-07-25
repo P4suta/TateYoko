@@ -1,80 +1,126 @@
-# 縦横 (TateYoko) — developer command runner (single source of truth).
-# Run under the mise-pinned toolchain:  mise exec -- just <recipe>
-# (or, with mise activated in your shell,  just <recipe>).
+# 縦横 (TateYoko) — the one local/CI command surface.
+# Windows 11 is the only supported development and release host.
 
-set shell := ["bash", "-euo", "pipefail", "-c"]
-set windows-shell := ["bash", "-euo", "pipefail", "-c"]
+set shell := ["pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command"]
+set windows-shell := ["pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command"]
 
-# Release defaults mirror tools/TateYoko.Pack's Options.Parse.
 version := "0.1.0"
-rid := "win-x64"
 
-# List all recipes.
 default:
     @just --list
 
-# Provision the pinned toolchain (.NET 10 + just) from mise.toml.
-setup:
+# Install the exactly pinned PowerShell analyzer used by local and CI gates.
+setup-powershell:
+    if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer | Where-Object Version -EQ '1.25.0')) { Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.25.0 -Repository PSGallery -Scope CurrentUser -Force -ErrorAction Stop }
+
+# Install the exactly pinned host toolchain.
+setup: setup-powershell
     mise install
 
-# Build the whole solution (Release).
+# Restore manifest-pinned .NET tools and refresh NuGet lock files.
+restore:
+    dotnet tool restore
+    dotnet restore TateYoko.slnx
+
+# Reproduce only the committed dependency graph; CI and releases use this.
+restore-locked:
+    dotnet tool restore
+    dotnet restore TateYoko.slnx --locked-mode
+
+# Compile every product, test, and release-gate project with strict analyzers.
 build:
-    dotnet build TateYoko.slnx -c Release
+    dotnet build TateYoko.slnx -c Release --no-restore
 
-# All tests (Core unit + Pdf integration + ViewModel state machine).
+# Run both Microsoft Testing Platform v2 test executables.
 test:
-    dotnet test TateYoko.slnx -c Release
+    dotnet test TateYoko.slnx -c Release --no-restore
 
-# Run the app in development (unpackaged).
-run:
-    dotnet run --project src/TateYoko.App
+# Exercise the release gate executables as black boxes with valid and hostile fixtures.
+release-tools-test:
+    ./tests/release/release-tools-tests.ps1
 
-# Format the code in place (.editorconfig rules).
-fmt:
-    dotnet format TateYoko.slnx
+# Enforce deterministic line/branch budgets for Engine and application logic.
+coverage:
+    if (Test-Path -LiteralPath build/coverage) { Remove-Item -LiteralPath build/coverage -Recurse -Force }
+    dotnet test tests/TateYoko.Engine.Tests/TateYoko.Engine.Tests.csproj -c Release --no-restore --results-directory build/coverage/engine --coverlet
+    dotnet test tests/TateYoko.App.Tests/TateYoko.App.Tests.csproj -c Release --no-restore --results-directory build/coverage/app --coverlet
+    dotnet run --project tools/TateYoko.Quality -c Release --no-restore -- coverage build/coverage
 
-# Verify formatting without writing — the CI gate.
-fmt-check:
-    dotnet format TateYoko.slnx --verify-no-changes
+# Prove that Engine tests kill at least 80% of all supported mutations.
+mutation:
+    $exitCode = 0; Push-Location src/TateYoko.Engine; try { dotnet stryker --skip-version-check; $exitCode = $LASTEXITCODE } finally { Pop-Location }; if ($exitCode -ne 0) { exit $exitCode }
 
-# Regenerate icon assets from assets/AppIcon.png.
-icons:
-    dotnet run --project tools/TateYoko.Icons
+# Fail if the restored graph contains a low-or-higher known vulnerability.
+audit:
+    New-Item -ItemType Directory -Force build/audit | Out-Null
+    $report = 'build/audit/nuget-vulnerabilities.json'; $output = & dotnet package list --project TateYoko.slnx --vulnerable --include-transitive --no-restore --format json --output-version 1; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; [IO.File]::WriteAllLines($report, $output, [Text.UTF8Encoding]::new($false))
+    dotnet run --project tools/TateYoko.Quality -c Release --no-restore -- audit build/audit/nuget-vulnerabilities.json
 
-# Full distribution bundle + zip/checksum (local release flow = old `mise run publish`).
-publish version=version rid=rid:
-    dotnet run --project tools/TateYoko.Pack -c Release -- all --version {{version}} --rid {{rid}}
+# Generate the exact third-party legal text from the restored shipping graph.
+notices:
+    dotnet run --project tools/TateYoko.Notices -c Release --no-restore -- src/TateYoko.App/obj/project.assets.json build/legal/THIRD-PARTY-NOTICES.txt
 
-# Assemble the bundle only, no zip — the step CI signs between.
-bundle version=version rid=rid:
-    dotnet run --project tools/TateYoko.Pack -c Release -- bundle --version {{version}} --rid {{rid}}
-
-# Zip + SHA256SUMS the (already-assembled) bundle.
-package version=version rid=rid:
-    dotnet run --project tools/TateYoko.Pack -c Release -- package --version {{version}} --rid {{rid}}
-
-# Stage first-party PEs for Authenticode signing.
-sign-stage:
-    dotnet run --project tools/TateYoko.Pack -c Release -- sign-stage
-
-# Copy signed PEs back into the bundle.
-sign-collect:
-    dotnet run --project tools/TateYoko.Pack -c Release -- sign-collect
-
-# Print the bundle-relative first-party PE paths.
-list-signable:
-    dotnet run --project tools/TateYoko.Pack -c Release -- list-signable
-
-# CycloneDX SBOM of the shipped app (routed through just so CI stops bypassing mise).
+# Generate a CycloneDX JSON SBOM for shipped runtime dependencies.
 sbom version=version:
-    mkdir -p build/sbom
-    dotnet tool install --global CycloneDX || true
-    dotnet CycloneDX src/TateYoko.App/TateYoko.App.csproj --output build/sbom --json --filename tateyoko.cdx.json --set-version {{version}}
+    New-Item -ItemType Directory -Force build/sbom | Out-Null
+    dotnet CycloneDX src/TateYoko.App/TateYoko.App.csproj -o build/sbom -F Json -fn tateyoko.cdx.json -sv {{version}} -sn TateYoko -st Application -ed
 
-# What CI runs: format gate + tests.
-ci: fmt-check test
+# Build, register, and launch the packaged development app through the pinned WinApp CLI.
+run:
+    ./BuildAndRun.ps1 src/TateYoko.App/TateYoko.App.csproj /p:Configuration=Debug /p:Platform=x64
 
-# Remove build + publish outputs.
+# Exercise the running app through Windows UI Automation and capture RC evidence.
+ui-test app_pid:
+    ./tests/ui/ui-tests.ps1 -AppPid {{app_pid}}
+
+# Regenerate all icon and MSIX logo assets from the checked-in source icon.
+icons:
+    dotnet run --project tools/TateYoko.Icons -c Release --no-restore
+
+# Format every checked-in C# source deterministically without evaluating WinUI generated files.
+fmt:
+    dotnet tool run csharpier format .
+
+# Verify C# formatting without modifying the worktree.
+fmt-check:
+    dotnet tool run csharpier check .
+
+# Validate GitHub Actions syntax, expressions, job dependencies, and shell snippets.
+actions-check:
+    actionlint
+
+# Reject every PowerShell analyzer diagnostic, including information-level rules.
+powershell-check:
+    ./.config/Test-PowerShell.ps1
+
+# Build unsigned x64/ARM64 portable executables and an MSIX bundle.
+dist-build version=version:
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- build --version {{version}}
+
+# Copy exactly the release files that must receive Authenticode signatures.
+sign-stage version=version:
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- stage-signing --version {{version}}
+
+# Collect externally signed artifacts and immediately validate them.
+sign-collect version=version:
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- collect-signing --version {{version}}
+
+# Revalidate signer identity, timestamp, bundle architecture, and AppInstaller.
+sign-verify version=version:
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- verify --version {{version}}
+
+# Assemble release files only after signatures, SBOM, notices, and license exist.
+package version=version:
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- package --version {{version}}
+
+# Print the authoritative external-signing input list.
+list-signable:
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- list-signable
+
+# Full merge gate. The dependency graph and every executable are version-pinned.
+ci: restore-locked actions-check powershell-check fmt-check build release-tools-test test coverage audit notices mutation
+
+# Remove only known generated directories beneath the repository.
 clean:
     dotnet clean TateYoko.slnx -c Release
-    rm -rf publish/win-x64 publish/package publish/sign-stage publish/signed publish/.launcher-* build/sbom
+    foreach ($path in @('publish', 'build')) { if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force } }

@@ -2,150 +2,115 @@
 
 <img src="assets/AppIcon.png" width="104" height="104" alt="縦横 (TateYoko) app icon" />
 
-# 縦横 &nbsp;·&nbsp; TateYoko
+# 縦横 · TateYoko
 
-**縦書きの PDF を、2ページずつ右綴じ見開きに。**
-
-Turn a vertical-writing (RTL) PDF into right-bound landscape spreads — so a wide screen reads like the real book.
+**縦書きPDFを、ワイド画面で自然に読める右綴じ見開きへ。**
 
 [![CI](https://github.com/P4suta/TateYoko/actions/workflows/ci.yml/badge.svg)](https://github.com/P4suta/TateYoko/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/P4suta/TateYoko/badge)](https://scorecard.dev/viewer/?uri=github.com/P4suta/TateYoko)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/Windows%2011-0078D6?logo=windows11&logoColor=white)
-![.NET](https://img.shields.io/badge/.NET%2010-512BD4?logo=dotnet&logoColor=white)
-
-<br />
-
-<img src="docs/screenshot.png" width="820" alt="TateYoko — drop a vertical-writing PDF onto the window" />
+![Windows 11](https://img.shields.io/badge/Windows%2011-x64%20%7C%20ARM64-0078D6?logo=windows11&logoColor=white)
 
 </div>
 
----
+## できること
 
-## ✨ What it does
+縦書き本の1ページPDFを2ページずつ横に並べ、右から左へ読む見開きPDFを作ります。
+ファイルをドロップし、最初のページの扱いを選び、変換するだけです。
 
-It takes a PDF of scanned **portrait** pages from a vertically written book and lays **two pages side by
-side** on one landscape page. Reading order is **right-to-left**, so any PDF viewer's spread view shows
-the pages in the correct order. One job, done well — comfortable reading on a wide screen.
-
-```
-   portrait pages  (read right → left)              right-bound spreads
-   ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐                    ┌───────┐ ┌───────┐
-   │ 5 │ │ 4 │ │ 3 │ │ 2 │ │ 1 │      ────►         │ 2 │ 1 │ │ 4 │ 3 │  …
-   └───┘ └───┘ └───┘ └───┘ └───┘                    └───────┘ └───────┘
-                                                      page 1 lands on the right
+```text
+入力:  1, 2, 3, 4, 5
+出力: [ 2 | 1 ] [ 4 | 3 ] [ 空白 | 5 ]
 ```
 
-<table>
-<tr>
-<td width="33%" valign="top">
+最初のページは次の3通りから選べます。
 
-### 🪶 Drop & go
-Drop a PDF anywhere on the window (or pick a file). `<name>_spread.pdf` is written right next to it.
+- 右から開始 — 1ページ目を最初の見開きの右へ配置
+- 表紙を単独表示 — 1ページ目を単独の表紙として扱う
+- 左から開始 — 右側を空白にして1ページ目を左へ配置
 
-</td>
-<td width="33%" valign="top">
+ページごとのサイズが異なるPDF、奇数ページ、パスワードで保護されたPDFにも対応します。
+出力は入力と同じフォルダーの `<元名>_spread.pdf` です。既存ファイルは上書きせず、
+必要なら番号付きの名前を原子的に確保します。
 
-### 📖 Right-bound
-RTL pairing done properly — choose how the first page opens (from the right / cover alone / from the left).
+Webリンク、文書内リンク、名前付きリンク先、階層しおり、文書の言語と標準メタデータも
+見開き上の位置へ合わせて保持します。フォーム、メモ、添付、スクリプト、タグ付き構造、
+レイヤー、独自XMPなどを完全に保持できないPDFは、欠落した出力を作らず変換前に停止します。
 
-</td>
-<td width="33%" valign="top">
+## インストール
 
-### 📦 Zero install
-Unpackaged & self-contained. Copy the folder anywhere and run — the .NET / WinApp SDK runtimes are bundled.
+対応環境はWindows 11のx64とARM64です。
 
-</td>
-</tr>
-</table>
+推奨は[Releases](https://github.com/P4suta/TateYoko/releases)にある
+`TateYoko.appinstaller`です。署名済みMSIX bundleをインストールし、公開済みの最新版を
+自動確認します。MSIXとportable版はどちらも.NETとWindows App SDKを内包するため、
+別のランタイムを事前インストールする必要はありません。インストールせず使う場合は、
+CPUに合うZIPを展開し、`TateYoko.exe`と`TateYoko.pri`を同じフォルダーに置いたまま
+起動します。
 
-## 🚀 Usage
+- `TateYoko-win-x64.zip`
+- `TateYoko-win-arm64.zip`
 
-1. Launch the app and **drop a vertical-writing PDF anywhere on the window** (or click *Choose file*).
-2. Choose how the first page opens (from the right / cover alone / from the left).
-3. Click **Make spread**. `<name>_spread.pdf` is written next to the input.
+すべての公開実行コードはAuthenticode署名とRFC 3161タイムスタンプを必須とし、ZIPを
+含む全公開物へチェックサム、CycloneDX SBOM、第三者ライセンス、GitHub artifact
+attestationを付けます。署名できないビルドは公開されません。
 
-## 📥 Download
-
-Grab the latest signed `.zip` from [**Releases**](https://github.com/P4suta/TateYoko/releases), unzip anywhere, and double-click `TateYoko.exe`.
-
-```
-publish/win-x64/
-├─ TateYoko.exe      ← double-click this (launcher)
-├─ README.txt
-├─ BUILDINFO.txt
-└─ app/             ← the app and its runtime (do not touch)
+```powershell
+gh attestation verify TateYoko.msixbundle --repo P4suta/TateYoko
+Get-FileHash TateYoko.msixbundle -Algorithm SHA256
+Get-AuthenticodeSignature TateYoko.msixbundle
 ```
 
-The bundle root holds **only a launcher plus a README**; the app's ~350 files are confined to `app/`. The
-root `TateYoko.exe` is a native (NativeAOT) launcher that starts `app/TateYoko.App.exe` and forwards its
-arguments — so it's always obvious which exe to run.
+## プライバシーと公開範囲
 
-## 🏗️ Architecture
+変換は端末内だけで完結します。テレメトリ、更新確認を含むアプリ独自のネットワーク通信、
+広告、アカウント、クラウド保存はありません。AppInstallerによる更新確認はWindowsの
+配布機構が行います。
 
-A **hexagonal** design in four projects. Dependencies point inward — `Core` depends on neither PDF nor UI.
+PDFはユーザーが画面で1ファイルずつ選択します。ファイル関連付け、プロトコル、Explorer
+メニュー、コマンドライン入力は公開していません。暗号化PDFのパスワードは必要な変換中
+だけメモリに保持し、設定やログへ保存しません。診断ログにはファイルパスやPDF内容を
+書きません。
 
-```
-TateYoko.Core         Pure domain + use cases (PageDimension / Pagination /
-                      SpreadLayoutCalculator / SpreadConversionService). No PDF/UI dependency.
-TateYoko.Pdf          Infrastructure. Implements Core's ports with PDFsharp (the only layer that depends on PDF).
-TateYoko.Presentation Presentation logic (MainViewModel state machine) over Core, behind small
-                      abstractions (IUiDispatcher / IUiStrings / IShellLauncher). No WinUI dependency.
-TateYoko.App          WinUI 3 (unpackaged) + composition root. Supplies the WinUI adapters for the
-                      presentation abstractions. MVVM (CommunityToolkit.Mvvm) + DI.
-```
+## 設計
 
-The boundary is enforced at compile time: neither `Core` nor `Presentation` references PDFsharp or WinUI,
-which keeps the domain and the view-model state machine unit-testable off the UI thread.
+公開APIは小さな`TateYoko.Engine`だけです。`TateYoko.App`はWinUI 3の状態機械とOS連携を
+担当し、PDFsharpはEngine内部へ閉じています。
 
-## 🛠️ Development
-
-**mise** pins the toolchain (.NET 10 + [`just`](https://just.systems)); **just** is the single command
-runner shared by local dev and CI. Run recipes under mise so they use the pinned SDK.
-
-```sh
-mise install                 # toolchain (.NET 10 + just)
-mise exec -- just --list     # every recipe
-mise exec -- just test       # all tests (Core unit + PDF integration + ViewModel state machine)
-mise exec -- just run        # run in development (unpackaged)
-mise exec -- just publish    # assemble the distribution bundle into publish/
-mise exec -- just icons      # regenerate icon assets from assets/AppIcon.png
-mise exec -- just ci         # what CI runs: format check + tests
+```text
+TateYoko.App  ──>  TateYoko.Engine  ──>  PDFsharp
+      │                    │
+  WinUI/MVVM          公開変換契約
 ```
 
-With mise activated in your shell you can drop the prefix (`just test`). See [`justfile`](justfile) for the
-full list. Release packaging is orchestrated by the C# tool `tools/TateYoko.Pack` (a thin `just publish`
-wrapper) rather than a shell script; it also writes a zip and `SHA256SUMS.txt` to `publish/package/`.
-Because the launcher is **NativeAOT**, building the bundle needs **Visual Studio C++ build tools** (MSVC
-linker + Windows SDK): `winget install Microsoft.VisualStudio.2022.BuildTools`, then add *Desktop
-development with C++*.
+変換処理は全ページをメモリへ載せずに順次処理し、同じフォルダーの一時ファイルへ書いた後、
+再オープン検証に成功した場合だけ出力名へ確定します。キャンセル・例外・プロセス競合でも
+既存出力を壊さないことをテストしています。
 
-## 🔒 Releases & security
+## 開発
 
-Versioning and releases are automated from [Conventional Commits](https://www.conventionalcommits.org/)
-with release-please: merging its Release PR cuts a version, then CI builds a self-contained bundle,
-Authenticode-signs the first-party binaries (SSL.com eSigner), attaches keyless build-provenance and a
-CycloneDX SBOM, and publishes a signed `.zip` + `SHA256SUMS.txt`. See [docs/RELEASING.md](docs/RELEASING.md)
-and [docs/SIGNING.md](docs/SIGNING.md). Report vulnerabilities privately per [SECURITY.md](.github/SECURITY.md).
+`.NET 10.0.302`、`just`、補助ツールはすべてバージョン固定です。
 
-Verify a download:
-
-```sh
-gh attestation verify TateYoko-vX.Y.Z-win-x64.zip --repo P4suta/TateYoko
-sha256sum -c SHA256SUMS.txt
+```powershell
+mise install
+mise exec -- just restore          # 初回/依存更新時。lock fileも更新
+mise exec -- just ci               # CIと同じ全ゲート
+mise exec -- just run              # Developer Modeが必要
+mise exec -- just dist-build 0.1.0
 ```
 
-## 🧰 Tech stack
+実UIのRC確認は`just run`で表示されたPIDを
+`mise exec -- just ui-test <PID>`へ渡します。キーボード、Windowsピッカー、主要状態、
+アクセシビリティIDを一括検査し、状態別PNGとJSON結果を`build/ui-tests/`へ保存します。
 
-| Category | Technology |
-|---|---|
-| Language / runtime | C# / .NET 10 |
-| UI | WinUI 3 (Windows App SDK) — unpackaged / self-contained |
-| MVVM | CommunityToolkit.Mvvm |
-| DI | Microsoft.Extensions.DependencyInjection |
-| PDF | PDFsharp 6.x (MIT) |
-| Tests | xUnit, NSubstitute (fakes), CsCheck (property-based invariants) |
+`just ci`はlocked restore、format、全警告エラーのbuild、テスト、line/branch coverage、
+NuGet監査、法務notice生成、mutation testingを実行します。PDFレイアウトはPopplerで
+レンダリングしたピクセル結果でも検証し、1000ページの時間・メモリ予算も固定しています。
 
-## 📄 License
+詳しくは[CONTRIBUTING.md](CONTRIBUTING.md)、リリース手順は
+[docs/RELEASING.md](docs/RELEASING.md)を参照してください。
 
-[Apache-2.0](LICENSE)
+## License
+
+TateYokoは[Apache-2.0](LICENSE)です。配布物に正確な
+`THIRD-PARTY-NOTICES.txt`を同梱します。

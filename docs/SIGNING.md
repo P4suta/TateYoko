@@ -1,51 +1,54 @@
 # Code signing
 
-Release binaries are Authenticode-signed so Windows SmartScreen doesn't warn end
-users. Signing uses **SSL.com eSigner** (a cloud HSM) via the official
-[`SSLcom/esigner-codesign`](https://github.com/SSLcom/esigner-codesign) Action.
+Windowsに配布する3ファイルをSSL.com eSignerでAuthenticode署名します。
 
-## What gets signed
+| File | Purpose |
+| --- | --- |
+| `TateYoko-win-x64.exe` | x64 portable ZIPに格納する実行ファイル |
+| `TateYoko-win-arm64.exe` | ARM64 portable ZIPに格納する実行ファイル |
+| `TateYoko.msixbundle` | x64/ARM64 MSIX installation and AppInstaller updates |
 
-Only our own five PE files — the bundled .NET / Windows App SDK runtime DLLs are
-already Microsoft-signed. The authoritative list lives in
-[`tools/TateYoko.Pack`](../tools/TateYoko.Pack/Program.cs) (`FirstPartyPes`):
+MSIX bundleの署名は含まれるMSIXにも再帰適用されます。`TateYoko.appinstaller`は実行可能
+コードではないためAuthenticode対象ではなく、SHA-256とbuild provenanceで完全性を担保します。
 
-| File | Role |
-| ---- | ---- |
-| `TateYoko.exe` | root launcher (NativeAOT) |
-| `app/TateYoko.App.exe` | apphost |
-| `app/TateYoko.App.dll` | managed entry assembly |
-| `app/TateYoko.Core.dll` | first-party domain library |
-| `app/TateYoko.Pdf.dll` | first-party PDF library |
+署名対象の唯一の定義は`tools/TateYoko.Pack`です。`stage-signing`は上の3ファイルだけを
+flat directoryへコピーし、外部署名後の`collect-signing`は直ちに次を検証します。
+公開時は各署名済みexeを必須の`TateYoko.pri`と組にしたCPU別ZIPへ格納します。
 
-`TateYoko.Pack sign-stage` copies these into a flat `publish/sign-stage/` dir for
-`batch_sign`; `sign-collect` copies the signed files back. After collection the
-[`verify-signatures`](../.github/actions/verify-signatures/action.yml) action asserts
-each PE has a valid chain, an RFC 3161 timestamp, and the expected signer subject.
+- SignToolのdefault Authenticode policyでchainが有効
+- 全署名が有効
+- RFC 3161 timestampが存在
+- signer subjectが`CN=Yasunobu Sakashita`と完全一致
+- MSIX identity/publisher/minimum OS/capabilityが期待値どおり
+- bundleにx64とARM64が1つずつ存在
+- file association、protocol、execution aliasなどのextensionがない
 
-## Dormant until configured
+`publish` jobでも同じ検証を再実行します。検証ロジックをworkflow内へ複製しません。
 
-The signing steps are gated on the presence of the eSigner secrets. **With no
-secrets set, a release still builds and publishes — unsigned, with a `::warning::`.**
-Add the secrets to light signing up; no workflow change is needed.
+## Required secrets
 
-## Enabling signing
-
-Add these secrets to the **`release`** environment (Settings → Environments →
-`release` → Secrets):
+GitHubの`release` environmentへ次を設定します。
 
 | Secret | Meaning |
-| ------ | ------- |
+| --- | --- |
 | `ES_USERNAME` | SSL.com account username |
 | `ES_PASSWORD` | SSL.com account password |
-| `CREDENTIAL_ID` | eSigner credential ID for the code-signing cert |
-| `ES_TOTP_SECRET` | eSigner TOTP secret (for automated 2FA) |
+| `CREDENTIAL_ID` | eSigner code-signing certificate credential |
+| `ES_TOTP_SECRET` | automated TOTP secret |
 
-The expected signer subject is asserted in [`release.yml`](../.github/workflows/release.yml)
-via `SIGNER_SUBJECT_CONTAINS` — update it if you sign with a different certificate.
+4つすべてが必要です。部分設定や未設定はrelease失敗です。workflowは署名なしで公開を続けません。
+`release` environmentにはrequired reviewersを設定し、secretにアクセスできるjobを人の承認後に
+開始してください。
 
-Verify a release download:
+証明書を変更する場合は、先にmanifest publisherと`tools/TateYoko.Pack`の
+`ExpectedPublisher`を同じidentityへ更新し、`publish=false` smoke testを通します。
 
-```sh
-gh attestation verify TateYoko-vX.Y.Z-win-x64.zip --repo P4suta/TateYoko
+## Local verification
+
+```powershell
+Get-AuthenticodeSignature .\TateYoko-win-x64.exe | Format-List
+Get-AuthenticodeSignature .\TateYoko-win-arm64.exe | Format-List
+Get-AuthenticodeSignature .\TateYoko.msixbundle | Format-List
 ```
+
+表示が`Valid`でも、release gateはtimestampと期待したsigner subjectまで確認します。

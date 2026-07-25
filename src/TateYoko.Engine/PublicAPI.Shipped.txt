@@ -1,0 +1,51 @@
+#nullable enable
+override TateYoko.Engine.PdfSpreadRequest.ToString() -> string!
+TateYoko.Engine.FirstPageMode
+TateYoko.Engine.FirstPageMode.Cover = 1 -> TateYoko.Engine.FirstPageMode
+TateYoko.Engine.FirstPageMode.LeadingBlank = 2 -> TateYoko.Engine.FirstPageMode
+TateYoko.Engine.FirstPageMode.Standard = 0 -> TateYoko.Engine.FirstPageMode
+TateYoko.Engine.IPdfSpreadConverter
+TateYoko.Engine.IPdfSpreadConverter.Convert(TateYoko.Engine.PdfSpreadRequest! request, System.IProgress<TateYoko.Engine.PdfSpreadProgress!>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> TateYoko.Engine.PdfSpreadResult!
+TateYoko.Engine.OutputCollisionPolicy
+TateYoko.Engine.OutputCollisionPolicy.CreateUnique = 0 -> TateYoko.Engine.OutputCollisionPolicy
+TateYoko.Engine.OutputCollisionPolicy.ReplaceExisting = 1 -> TateYoko.Engine.OutputCollisionPolicy
+TateYoko.Engine.PdfSpreadConverter
+TateYoko.Engine.PdfSpreadConverter.Convert(TateYoko.Engine.PdfSpreadRequest! request, System.IProgress<TateYoko.Engine.PdfSpreadProgress!>? progress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> TateYoko.Engine.PdfSpreadResult!
+TateYoko.Engine.PdfSpreadConverter.PdfSpreadConverter() -> void
+TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.CorruptedPdf = 6 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.InputNotFound = 1 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.Internal = 9 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.InvalidPage = 7 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.InvalidPassword = 5 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.InvalidRequest = 0 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.PasswordRequired = 4 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.ReadFailed = 2 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.UnsupportedFile = 3 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.UnsupportedPdfFeature = 10 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadError.WriteFailed = 8 -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadException
+TateYoko.Engine.PdfSpreadException.Error.get -> TateYoko.Engine.PdfSpreadError
+TateYoko.Engine.PdfSpreadException.PdfSpreadException() -> void
+TateYoko.Engine.PdfSpreadException.PdfSpreadException(string? message) -> void
+TateYoko.Engine.PdfSpreadException.PdfSpreadException(string? message, System.Exception? innerException) -> void
+TateYoko.Engine.PdfSpreadException.PdfSpreadException(TateYoko.Engine.PdfSpreadError error, string? technicalDetail = null, System.Exception? innerException = null) -> void
+TateYoko.Engine.PdfSpreadException.TechnicalDetail.get -> string?
+TateYoko.Engine.PdfSpreadProgress
+TateYoko.Engine.PdfSpreadProgress.CompletedSpreads.get -> int
+TateYoko.Engine.PdfSpreadProgress.Fraction.get -> double
+TateYoko.Engine.PdfSpreadProgress.PdfSpreadProgress(int completedSpreads, int totalSpreads) -> void
+TateYoko.Engine.PdfSpreadProgress.TotalSpreads.get -> int
+TateYoko.Engine.PdfSpreadRequest
+TateYoko.Engine.PdfSpreadRequest.CollisionPolicy.get -> TateYoko.Engine.OutputCollisionPolicy
+TateYoko.Engine.PdfSpreadRequest.FirstPageMode.get -> TateYoko.Engine.FirstPageMode
+TateYoko.Engine.PdfSpreadRequest.InputPath.get -> string!
+TateYoko.Engine.PdfSpreadRequest.OutputPath.get -> string!
+TateYoko.Engine.PdfSpreadRequest.Password.get -> string?
+TateYoko.Engine.PdfSpreadRequest.PdfSpreadRequest(string! inputPath, string! outputPath, TateYoko.Engine.FirstPageMode firstPageMode, TateYoko.Engine.OutputCollisionPolicy collisionPolicy = TateYoko.Engine.OutputCollisionPolicy.CreateUnique, string? password = null, bool preservePasswordProtection = true) -> void
+TateYoko.Engine.PdfSpreadRequest.PreservePasswordProtection.get -> bool
+TateYoko.Engine.PdfSpreadResult
+TateYoko.Engine.PdfSpreadResult.InputPageCount.get -> int
+TateYoko.Engine.PdfSpreadResult.OutputPath.get -> string!
+TateYoko.Engine.PdfSpreadResult.PdfSpreadResult(string! outputPath, int inputPageCount, int spreadCount) -> void
+TateYoko.Engine.PdfSpreadResult.SpreadCount.get -> int

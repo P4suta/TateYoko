@@ -1,94 +1,203 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <RootNamespace>TateYoko.App</RootNamespace>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Platforms>x64;ARM64</Platforms>
-    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
-    <UseWinUI>true</UseWinUI>
-    <WinUISDKReferences>false</WinUISDKReferences>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <DefaultLanguage>en-US</DefaultLanguage>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+        <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+        <RootNamespace>TateYoko.App</RootNamespace>
+        <AssemblyName>TateYoko</AssemblyName>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+        <Platforms>x64;ARM64</Platforms>
+        <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+        <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''"
+            >win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+        <UseWinUI>true</UseWinUI>
+        <WinUISDKReferences>false</WinUISDKReferences>
+        <EnableMsixTooling>true</EnableMsixTooling>
+        <EnableWinAppRunSupport>true</EnableWinAppRunSupport>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <!-- Required only by LibraryImport-generated P/Invoke; the application has no handwritten unsafe code. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <DefaultLanguage>en-US</DefaultLanguage>
+        <!-- Ship only the languages declared in Package.appxmanifest and covered by contract tests. -->
+        <SatelliteResourceLanguages>en-US;ja-JP;zh-CN</SatelliteResourceLanguages>
+        <DistributionMode Condition="'$(DistributionMode)' == ''">Msix</DistributionMode>
+        <!-- Every shipped form is offline-ready: neither .NET nor Windows App SDK is a prerequisite. -->
+        <SelfContained Condition="'$(DistributionMode)' != 'Reference'">true</SelfContained>
+        <WindowsAppSDKSelfContained Condition="'$(DistributionMode)' != 'Reference'"
+            >true</WindowsAppSDKSelfContained>
+        <!-- The SDK's generated initializer uses an unrestricted DllImport. We initialize portable builds
+         explicitly and pin runtime lookup to the single-file extraction directory instead. -->
+        <WindowsAppSdkUndockedRegFreeWinRTInitialize>false</WindowsAppSdkUndockedRegFreeWinRTInitialize>
 
-    <!--
-      Unpackaged / self-contained (no MSIX). WindowsPackageType=None launches without a package
-      identity; WindowsAppSDKSelfContained bundles the WinApp SDK runtime so no install is needed.
-    -->
-    <WindowsPackageType>None</WindowsPackageType>
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <EnableMsixTooling>false</EnableMsixTooling>
+        <!-- WinUI + trimming can break XAML reflection, so disable trimming. -->
+        <PublishTrimmed>false</PublishTrimmed>
+        <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">true</PublishReadyToRun>
+    </PropertyGroup>
 
-    <!-- WinUI + trimming can break XAML reflection, so disable trimming. -->
-    <PublishTrimmed>false</PublishTrimmed>
-    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">true</PublishReadyToRun>
-  </PropertyGroup>
+    <PropertyGroup Condition="'$(DistributionMode)' == 'Reference'">
+        <!-- Unit-test ProjectReference builds compile app logic without becoming a second distribution. -->
+        <SelfContained>false</SelfContained>
+        <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+        <EnableWinAppRunSupport>false</EnableWinAppRunSupport>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <!--
-      The window/title-bar icon is loaded from this loose file at runtime (AppWindow.SetIcon +
-      TitleBar.IconSource), so it must sit next to the app in both the build and publish output.
-      The tile / splash / store logos below are MSIX manifest assets, unused by this unpackaged
-      build, but kept so `mise run icons` has a stable set to regenerate.
-    -->
-    <Content Include="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Assets\SplashScreen.scale-200.png" />
-    <Content Include="Assets\Square44x44Logo.scale-200.png" />
-    <Content Include="Assets\StoreLogo.png" />
-  </ItemGroup>
+    <PropertyGroup Condition="'$(DistributionMode)' == 'Portable'">
+        <WindowsPackageType>None</WindowsPackageType>
+        <DefineConstants>$(DefineConstants);TATEYOKO_PORTABLE</DefineConstants>
+        <PublishSingleFile>true</PublishSingleFile>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Manifest Include="$(ApplicationManifest)" />
-  </ItemGroup>
+    <ItemGroup>
+        <!-- Required at runtime by AppWindow.SetIcon and the custom WinUI title bar. -->
+        <Content
+            Include="Assets\AppIcon.ico"
+            CopyToOutputDirectory="PreserveNewest"
+            CopyToPublishDirectory="PreserveNewest"
+        />
+        <Content
+            Include="Assets\SplashScreen.scale-200.png"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+        <Content
+            Include="Assets\Square150x150Logo.scale-200.png"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+        <Content
+            Include="Assets\Square44x44Logo.scale-200.png"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+        <Content
+            Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+        <Content
+            Include="Assets\Square44x44Logo.targetsize-48_altform-lightunplated.png"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+        <Content Include="Assets\StoreLogo.png" CopyToOutputDirectory="PreserveNewest" />
+        <Content
+            Include="Assets\Wide310x150Logo.scale-200.png"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2270" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="CommunityToolkit.WinUI.Controls.Segmented" Version="8.2.251219" />
-    <!-- 10.0.8 (not 9.0.0) to satisfy QPdfNet's transitive Microsoft.Extensions.Logging 10.0.8. -->
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
-  </ItemGroup>
+    <ItemGroup>
+        <Manifest Include="$(ApplicationManifest)" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\TateYoko.Core\TateYoko.Core.csproj" />
-    <ProjectReference Include="..\TateYoko.Pdf\TateYoko.Pdf.csproj" />
-    <ProjectReference Include="..\TateYoko.Presentation\TateYoko.Presentation.csproj" />
-  </ItemGroup>
+    <ItemGroup Condition="'$(ReleaseAppxManifest)' != ''">
+        <!-- Release tooling supplies an isolated manifest copy with the requested package version.
+             Explicit inclusion prevents the MSIX SDK from falling back to the design-time manifest. -->
+        <AppxManifest Include="$(ReleaseAppxManifest)">
+            <SubType>Designer</SubType>
+        </AppxManifest>
+    </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="TateYoko.App.Tests" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.5" />
+        <PackageReference
+            Include="Microsoft.WindowsAppSDK.InteractiveExperiences"
+            Version="2.1.3"
+        />
+        <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.3.1" />
+        <!-- Keep the component set aligned with Runtime 2.3.1's validated matrix. -->
+        <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.0" />
+        <PackageReference
+            Include="Microsoft.Windows.SDK.BuildTools"
+            Version="10.0.28000.2526"
+            PrivateAssets="all"
+        />
+        <PackageReference
+            Include="Microsoft.Windows.SDK.BuildTools.WinApp"
+            Version="0.5.0"
+            PrivateAssets="all"
+        />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    </ItemGroup>
 
-  <!--
-    Workaround: dotnet publish of an unpackaged WinUI app drops the app PRI (<AssemblyName>.pri)
-    from the output, so at startup Microsoft.UI.Xaml.dll cannot read XAML resources and crashes
-    with a stowed exception (0xC000027B). Copy the PRI from the build output ($(OutDir)) into the
-    publish output.
-  -->
-  <Target Name="CopyAppPriToPublishDir" AfterTargets="Publish">
-    <Copy
-      SourceFiles="$(OutDir)$(AssemblyName).pri"
-      DestinationFolder="$(PublishDir)"
-      SkipUnchangedFiles="true"
-      Condition="Exists('$(OutDir)$(AssemblyName).pri')" />
-  </Target>
+    <ItemGroup>
+        <ProjectReference Include="..\TateYoko.Engine\TateYoko.Engine.csproj" />
+    </ItemGroup>
 
-  <!--
-    Same publish quirk as the PRI above: dotnet publish of the unpackaged app drops the loose
-    Assets\ content, leaving the window icon (AppWindow.SetIcon) and the title-bar icon
-    (TitleBar.IconSource, ms-appx:///Assets/AppIcon.ico) with no file to load in the shipped
-    bundle. Copy the icon from the build output into the publish output.
-  -->
-  <Target Name="CopyAppIconToPublishDir" AfterTargets="Publish">
-    <Copy
-      SourceFiles="$(OutDir)Assets\AppIcon.ico"
-      DestinationFolder="$(PublishDir)Assets"
-      SkipUnchangedFiles="true"
-      Condition="Exists('$(OutDir)Assets\AppIcon.ico')" />
-  </Target>
+    <ItemGroup>
+        <InternalsVisibleTo Include="TateYoko.App.Tests" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)' != 'true' and '$(EnableMsixTooling)' == 'true'">
+        <ProjectCapability Include="Msix" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)' != 'true' and '$(EnableMsixTooling)' == 'true'">
+        <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+    </PropertyGroup>
+
+    <Target
+        Name="IncludeGeneratedPriInPortablePublish"
+        BeforeTargets="ComputeFilesToPublish"
+        Condition="'$(DistributionMode)' == 'Portable' and Exists('$(OutDir)$(AssemblyName).pri')"
+    >
+        <ItemGroup>
+            <ResolvedFileToPublish Include="$(OutDir)$(AssemblyName).pri">
+                <RelativePath>$(AssemblyName).pri</RelativePath>
+                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            </ResolvedFileToPublish>
+        </ItemGroup>
+    </Target>
+
+    <Target
+        Name="AcknowledgeCustomPortableRuntimeBootstrap"
+        BeforeTargets="WindowsAppSDKSingleFileVerifyConfiguration"
+        Condition="'$(DistributionMode)' == 'Portable'"
+    >
+        <PropertyGroup>
+            <!-- The SDK checks this property only to prove that the runtime base directory is set
+                 before entry. PortableRuntimeBootstrap performs that work with a module initializer
+                 while avoiding the SDK initializer's unrestricted DllImport search. Package imports
+                 were already evaluated with the property false, so this acknowledgement cannot add
+                 the generated initializer. -->
+            <WindowsAppSdkUndockedRegFreeWinRTInitialize>true</WindowsAppSdkUndockedRegFreeWinRTInitialize>
+        </PropertyGroup>
+    </Target>
+
+    <Target
+        Name="RemoveUnsupportedWinUiMuiResources"
+        AfterTargets="_UpdateMuiFilesAfterNugetRestore"
+    >
+        <ItemGroup>
+            <!-- WinUI publishes native MUI files for every available language. Keep the payload aligned
+           with TateYoko's explicit three-language product contract. -->
+            <RuntimeTargetsCopyLocalItems
+                Remove="@(RuntimeTargetsCopyLocalItems)"
+                Condition="
+          '%(RuntimeTargetsCopyLocalItems.Extension)' == '.mui'
+          And '%(RuntimeTargetsCopyLocalItems.DestinationSubDirectory)' != 'en-us\'
+          And '%(RuntimeTargetsCopyLocalItems.DestinationSubDirectory)' != 'ja-JP\'
+          And '%(RuntimeTargetsCopyLocalItems.DestinationSubDirectory)' != 'zh-CN\'"
+            />
+        </ItemGroup>
+    </Target>
+
+    <Target
+        Name="RemoveUnsupportedWindowsAppSdkMuiResources"
+        AfterTargets="AddMicrosoftWindowsAppSDKPayloadFilesFromComponents"
+    >
+        <ItemGroup>
+            <None
+                Remove="@(None)"
+                Condition="
+          '%(None.Extension)' == '.mui'
+          And '%(None.RecursiveDir)' != 'en-us\'
+          And '%(None.RecursiveDir)' != 'ja-JP\'
+          And '%(None.RecursiveDir)' != 'zh-CN\'"
+            />
+        </ItemGroup>
+    </Target>
 </Project>

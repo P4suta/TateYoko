@@ -11,18 +11,38 @@ trim_trailing_whitespace = true
 [*.{json,yml,yaml,toml}]
 indent_size = 2
 
-# The justfile is executed via bash; force LF so no CRLF leaks into recipe lines.
+# Keep recipes byte-stable across local PowerShell and GitHub-hosted runners.
 [justfile]
 end_of_line = lf
 indent_style = space
 indent_size = 4
 
 [*.cs]
-csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_namespace_declarations = file_scoped:error
 
-# --- Analyzer adjustments ---
-# Single / Pair are intentional domain vocabulary.
-dotnet_diagnostic.CA1716.severity = none
-dotnet_diagnostic.CA1720.severity = none
-# SpreadLayoutCalculator is a stateless but injectable domain service; keep it as an instance.
-dotnet_diagnostic.CA1822.severity = none
+[tests/**/*.cs]
+dotnet_diagnostic.CA1001.severity = none
+dotnet_diagnostic.CA1031.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA5394.severity = none
+
+# WinUI XAML instantiates these entry-point types by name and requires public visibility.
+[src/TateYoko.App/{App,MainWindow,MainPage}.xaml.cs]
+dotnet_diagnostic.CA1515.severity = none
+
+# "App" is the WinUI-required application entry point, not a reusable public API.
+[src/TateYoko.App/App.xaml.cs]
+dotnet_diagnostic.CA1724.severity = none
+
+# UI event and conversion boundaries deliberately catch all exceptions so an untrusted PDF or
+# WinRT picker failure cannot tear down the process; both paths redact the user-facing message.
+[src/TateYoko.App/MainPage.xaml.cs]
+dotnet_diagnostic.CA1031.severity = none
+
+[src/TateYoko.App/ViewModels/MainViewModel.cs]
+dotnet_diagnostic.CA1031.severity = none
+
+# Source injected by the signed Microsoft.WindowsAppSDK.Foundation package.
+[**/UndockedRegFreeWinRT-AutoInitializer.cs]
+dotnet_diagnostic.CA5392.severity = none

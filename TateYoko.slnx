@@ -1,15 +1,16 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/TateYoko.App/TateYoko.App.csproj" />
-    <Project Path="src/TateYoko.Launcher/TateYoko.Launcher.csproj" />
-    <Project Path="src/TateYoko.Core/TateYoko.Core.csproj" />
-    <Project Path="src/TateYoko.Pdf/TateYoko.Pdf.csproj" />
-    <Project Path="src/TateYoko.Presentation/TateYoko.Presentation.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/TateYoko.App.Tests/TateYoko.App.Tests.csproj" />
-    <Project Path="tests/TateYoko.Core.Tests/TateYoko.Core.Tests.csproj" />
-    <Project Path="tests/TateYoko.Pdf.Tests/TateYoko.Pdf.Tests.csproj" />
-    <Project Path="tests/TateYoko.Presentation.Tests/TateYoko.Presentation.Tests.csproj" />
-  </Folder>
+    <Folder Name="/src/">
+        <Project Path="src/TateYoko.App/TateYoko.App.csproj" />
+        <Project Path="src/TateYoko.Engine/TateYoko.Engine.csproj" />
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/TateYoko.App.Tests/TateYoko.App.Tests.csproj" />
+        <Project Path="tests/TateYoko.Engine.Tests/TateYoko.Engine.Tests.csproj" />
+    </Folder>
+    <Folder Name="/tools/">
+        <Project Path="tools/TateYoko.Icons/TateYoko.Icons.csproj" />
+        <Project Path="tools/TateYoko.Notices/TateYoko.Notices.csproj" />
+        <Project Path="tools/TateYoko.Pack/TateYoko.Pack.csproj" />
+        <Project Path="tools/TateYoko.Quality/TateYoko.Quality.csproj" />
+    </Folder>
 </Solution>

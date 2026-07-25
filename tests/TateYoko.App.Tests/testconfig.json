@@ -1,0 +1,17 @@
+{
+  "platformOptions": {
+    "Coverlet": {
+      "Include": "[TateYoko]TateYoko.App.*",
+      "Exclude": "[*.Tests]*,[coverlet.*]*",
+      "ExcludeByAttribute": "GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute",
+      "ExcludeByFile": "**/App.xaml.cs,**/MainPage.xaml.cs,**/MainWindow.xaml.cs,**/Services/Localized.cs,**/Services/ResourceUiStrings.cs,**/Services/ShellLauncher.cs",
+      "Format": "cobertura,json",
+      "UseSourceLink": false,
+      "SingleHit": false,
+      "IncludeTestAssembly": false,
+      "SkipAutoProps": false,
+      "DeterministicReport": true,
+      "ExcludeAssembliesWithoutSources": "MissingAll"
+    }
+  }
+}

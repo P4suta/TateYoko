@@ -1,61 +1,61 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using TateYoko.App.Services;
-using TateYoko.Core.Application;
-using TateYoko.Core.Ports;
-using TateYoko.Pdf;
-using TateYoko.Presentation.Abstractions;
-using TateYoko.Presentation.ViewModels;
+using TateYoko.App.ViewModels;
+using TateYoko.Engine;
 
 namespace TateYoko.App;
 
-/// <summary>
-/// Application and composition root. Configures the DI container and injects the PDFsharp adapter
-/// (<see cref="PdfSharpEngine"/>) into Core's services.
-/// </summary>
-public partial class App : Application
+/// <summary>Application composition root.</summary>
+public partial class App : Application, IDisposable
 {
-    /// <summary>DI service provider, used to resolve pages and view models.</summary>
-    public static IServiceProvider Services { get; private set; } = null!;
-
-    /// <summary>The main window, used for HWND interop (e.g. file pickers).</summary>
-    public static Window Window { get; private set; } = null!;
-
-    /// <summary>The UI thread dispatcher.</summary>
-    public static Microsoft.UI.Dispatching.DispatcherQueue DispatcherQueue { get; private set; } = null!;
-
-    /// <summary>The native window handle (HWND) for picker InitializeWithWindow.</summary>
-    public static nint WindowHandle => WinRT.Interop.WindowNative.GetWindowHandle(Window);
+    private MainViewModel? _viewModel;
+    private MainWindow? _window;
 
     public App()
     {
         InitializeComponent();
-        Services = ConfigureServices();
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        Window = new MainWindow();
-        DispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-        Window.Activate();
+        if (_window is not null)
+        {
+            _window.Activate();
+            return;
+        }
+
+        _viewModel = new MainViewModel(
+            new PdfSpreadConverter(),
+            new ResourceUiStrings(),
+            new ShellLauncher(),
+            new DiagnosticLog()
+        );
+        _window = new MainWindow(_viewModel);
+        _window.Closed += OnWindowClosed;
+        _window.Activate();
     }
 
-    private static IServiceProvider ConfigureServices()
+    private void OnWindowClosed(object sender, WindowEventArgs args)
     {
-        var services = new ServiceCollection();
+        Dispose();
+    }
 
-        // The only PDF dependency: the injection point at the composition root.
-        services.AddSingleton<IPdfEngine, PdfSharpEngine>();
-        services.AddSingleton<SpreadConversionService>();
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
 
-        // WinUI adapters for the presentation abstractions.
-        services.AddSingleton<IUiStrings, ResourceUiStrings>();
-        services.AddSingleton<IShellLauncher, ShellLauncher>();
-        // Captured on the UI thread at resolve time so Post() can marshal back to it from background work.
-        services.AddTransient<IUiDispatcher>(_ =>
-            new WinUiDispatcher(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()));
-        services.AddTransient<MainViewModel>();
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
 
-        return services.BuildServiceProvider();
+        _window?.Closed -= OnWindowClosed;
+        _window = null;
+        _viewModel?.Dispose();
+        _viewModel = null;
     }
 }

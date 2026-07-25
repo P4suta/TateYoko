@@ -1,30 +1,24 @@
-using TateYoko.Core.Domain;
+using TateYoko.Engine;
 
 namespace TateYoko.App.Services;
 
-/// <summary>Maps a language-independent <see cref="ErrorKind"/> to a localized display message.</summary>
-public static class ErrorMessages
+internal static class ErrorMessages
 {
-    /// <summary>Resource key for the non-PDF message.</summary>
-    internal const string NotPdfKey = "NotPdf";
+    internal static string For(PdfSpreadError error) => Localized.Get(ResourceKey(error));
 
-    /// <summary>Message shown when a non-PDF file is selected.</summary>
-    public static string NotPdf => Localized.Get(NotPdfKey);
-
-    public static string ForKind(ErrorKind kind) => Localized.Get(ResourceKeyForKind(kind));
-
-    /// <summary>
-    /// Maps a stable <see cref="ErrorKind"/> token to its resource key. Pure (no resource load), so
-    /// the mapping can be unit tested without the WinUI resource runtime.
-    /// </summary>
-    internal static string ResourceKeyForKind(ErrorKind kind) => kind switch
-    {
-        ErrorKind.PdfCorrupted => "ErrorPdfCorrupted",
-        ErrorKind.PdfPasswordProtected => "ErrorPdfPasswordProtected",
-        ErrorKind.PdfNotFound => "ErrorPdfNotFound",
-        ErrorKind.PdfInvalidPage => "ErrorPdfInvalidPage",
-        ErrorKind.PdfWriteFailed => "ErrorPdfWriteFailed",
-        ErrorKind.InvalidParameter => "ErrorInvalidParameter",
-        _ => "ErrorInternal",
-    };
+    internal static string ResourceKey(PdfSpreadError error) =>
+        error switch
+        {
+            PdfSpreadError.InvalidRequest => "ErrorInvalidRequest",
+            PdfSpreadError.InputNotFound => "ErrorInputNotFound",
+            PdfSpreadError.ReadFailed => "ErrorReadFailed",
+            PdfSpreadError.UnsupportedFile => "ErrorUnsupportedFile",
+            PdfSpreadError.PasswordRequired => "ErrorPasswordRequired",
+            PdfSpreadError.InvalidPassword => "ErrorInvalidPassword",
+            PdfSpreadError.CorruptedPdf => "ErrorCorruptedPdf",
+            PdfSpreadError.InvalidPage => "ErrorInvalidPage",
+            PdfSpreadError.WriteFailed => "ErrorWriteFailed",
+            PdfSpreadError.UnsupportedPdfFeature => "ErrorUnsupportedPdfFeature",
+            _ => "ErrorInternal",
+        };
 }

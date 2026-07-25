@@ -1,0 +1,84 @@
+<Project>
+    <!--
+    PDFsharp 6.2 exposes optional barcode, charting, sample, quality, and font assemblies as
+    runtime assets even when an application does not reference them. Keep every build and
+    publish path on the same tested minimum: PdfSharp + PdfSharp.Shared + PdfSharp.System.
+  -->
+    <Target
+        Name="RemoveUnusedPdfSharpAssembliesFromBuild"
+        AfterTargets="ResolveAssemblyReferences"
+        BeforeTargets="_CopyFilesMarkedCopyLocal"
+    >
+        <ItemGroup>
+            <ReferenceCopyLocalPaths
+                Remove="@(ReferenceCopyLocalPaths)"
+                Condition="
+          '%(ReferenceCopyLocalPaths.Filename)' == 'PdfSharp.BarCodes'
+          Or '%(ReferenceCopyLocalPaths.Filename)' == 'PdfSharp.Charting'
+          Or '%(ReferenceCopyLocalPaths.Filename)' == 'PdfSharp.Cryptography'
+          Or '%(ReferenceCopyLocalPaths.Filename)' == 'PdfSharp.Quality'
+          Or '%(ReferenceCopyLocalPaths.Filename)' == 'PdfSharp.Snippets'
+          Or '%(ReferenceCopyLocalPaths.Filename)' == 'PdfSharp.WPFonts'"
+            />
+        </ItemGroup>
+    </Target>
+
+    <Target
+        Name="RemoveUnusedPdfSharpAssembliesFromPublish"
+        AfterTargets="_ComputeResolvedCopyLocalPublishAssets"
+        BeforeTargets="ComputeFilesToPublish"
+    >
+        <ItemGroup>
+            <_ResolvedCopyLocalPublishAssets
+                Remove="@(_ResolvedCopyLocalPublishAssets)"
+                Condition="
+          '%(_ResolvedCopyLocalPublishAssets.Filename)' == 'PdfSharp.BarCodes'
+          Or '%(_ResolvedCopyLocalPublishAssets.Filename)' == 'PdfSharp.Charting'
+          Or '%(_ResolvedCopyLocalPublishAssets.Filename)' == 'PdfSharp.Cryptography'
+          Or '%(_ResolvedCopyLocalPublishAssets.Filename)' == 'PdfSharp.Quality'
+          Or '%(_ResolvedCopyLocalPublishAssets.Filename)' == 'PdfSharp.Snippets'
+          Or '%(_ResolvedCopyLocalPublishAssets.Filename)' == 'PdfSharp.WPFonts'"
+            />
+        </ItemGroup>
+    </Target>
+
+    <!-- .NET publish and single-project MSIX each materialize their own item graph after
+         ResolveAssemblyReferences. Remove the same optional PDFsharp modules at both final
+         boundaries so an SDK target cannot reintroduce them after the normal build filter. -->
+    <Target
+        Name="RemoveUnusedPdfSharpAssembliesFromResolvedPublish"
+        AfterTargets="ComputeFilesToPublish"
+    >
+        <ItemGroup>
+            <ResolvedFileToPublish
+                Remove="@(ResolvedFileToPublish)"
+                Condition="
+          '%(ResolvedFileToPublish.Filename)' == 'PdfSharp.BarCodes'
+          Or '%(ResolvedFileToPublish.Filename)' == 'PdfSharp.Charting'
+          Or '%(ResolvedFileToPublish.Filename)' == 'PdfSharp.Cryptography'
+          Or '%(ResolvedFileToPublish.Filename)' == 'PdfSharp.Quality'
+          Or '%(ResolvedFileToPublish.Filename)' == 'PdfSharp.Snippets'
+          Or '%(ResolvedFileToPublish.Filename)' == 'PdfSharp.WPFonts'"
+            />
+        </ItemGroup>
+    </Target>
+
+    <Target
+        Name="RemoveUnusedPdfSharpAssembliesFromMsixPayload"
+        AfterTargets="GetPackagingOutputs"
+        BeforeTargets="_ComputeAppxPackagePayload"
+    >
+        <ItemGroup>
+            <PackagingOutputs
+                Remove="@(PackagingOutputs)"
+                Condition="
+          '%(PackagingOutputs.Filename)' == 'PdfSharp.BarCodes'
+          Or '%(PackagingOutputs.Filename)' == 'PdfSharp.Charting'
+          Or '%(PackagingOutputs.Filename)' == 'PdfSharp.Cryptography'
+          Or '%(PackagingOutputs.Filename)' == 'PdfSharp.Quality'
+          Or '%(PackagingOutputs.Filename)' == 'PdfSharp.Snippets'
+          Or '%(PackagingOutputs.Filename)' == 'PdfSharp.WPFonts'"
+            />
+        </ItemGroup>
+    </Target>
+</Project>

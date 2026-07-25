@@ -1,11 +1,9 @@
 # .NET build output
 bin/
 obj/
-[Dd]ebug/
-[Rr]elease/
-x64/
-ARM64/
-publish/
+/x64/
+/ARM64/
+/publish/
 *.user
 *.suo
 
@@ -23,6 +21,7 @@ Generated Files/
 
 # Test results
 [Tt]est[Rr]esults/
+StrykerOutput/
 *.trx
 
 # OS

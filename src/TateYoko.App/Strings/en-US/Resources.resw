@@ -12,73 +12,175 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="AppTitle" xml:space="preserve">
+    <value>TateYoko</value>
+  </data>
+  <data name="AppDescription" xml:space="preserve">
+    <value>Create right-bound two-page spreads from a PDF, entirely offline.</value>
+  </data>
   <data name="IdleHeading.Text" xml:space="preserve">
-    <value>Drop a PDF</value>
+    <value>Turn a PDF into easy-to-read spreads</value>
   </data>
-  <data name="OpeningStandard.Content" xml:space="preserve">
-    <value>From right</value>
+  <data name="IdleDescription.Text" xml:space="preserve">
+    <value>Choose one PDF. Processing stays entirely on this device.</value>
   </data>
-  <data name="OpeningCover.Content" xml:space="preserve">
-    <value>Cover</value>
+  <data name="ChoosePdfButton.Content" xml:space="preserve">
+    <value>Choose PDF</value>
   </data>
-  <data name="OpeningLeadingBlank.Content" xml:space="preserve">
-    <value>From left</value>
+  <data name="DropHint.Text" xml:space="preserve">
+    <value>or drop one PDF here · Ctrl+O</value>
+  </data>
+  <data name="ReadyHeading.Text" xml:space="preserve">
+    <value>Ready to create spreads</value>
+  </data>
+  <data name="OpeningModeLabel.Text" xml:space="preserve">
+    <value>How does the book begin?</value>
+  </data>
+  <data name="OpeningStandardTitle.Text" xml:space="preserve">
+    <value>Pair from page 1</value>
+  </data>
+  <data name="OpeningStandardDescription.Text" xml:space="preserve">
+    <value>Place pages 1–2 together, then continue in pairs.</value>
+  </data>
+  <data name="OpeningCoverTitle.Text" xml:space="preserve">
+    <value>Keep page 1 as a cover</value>
+  </data>
+  <data name="OpeningCoverDescription.Text" xml:space="preserve">
+    <value>Keep page 1 alone, then pair pages 2–3.</value>
+  </data>
+  <data name="OpeningLeadingBlankTitle.Text" xml:space="preserve">
+    <value>Add a blank before page 1</value>
+  </data>
+  <data name="OpeningLeadingBlankDescription.Text" xml:space="preserve">
+    <value>Put page 1 on the left, then continue in pairs.</value>
+  </data>
+  <data name="OutputLabel.Text" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="ChangeOutputButton.Content" xml:space="preserve">
+    <value>Change…</value>
+  </data>
+  <data name="CollisionNote.Text" xml:space="preserve">
+    <value>Automatic names keep existing files. A destination you choose follows the overwrite confirmation.</value>
   </data>
   <data name="ConvertButton.Content" xml:space="preserve">
-    <value>Make spread</value>
+    <value>Create spreads</value>
   </data>
   <data name="PickAnotherButton.Content" xml:space="preserve">
-    <value>Choose another PDF</value>
+    <value>Choose another</value>
   </data>
-  <data name="DoneHeading.Text" xml:space="preserve">
-    <value>Spread created</value>
+  <data name="ConvertingHeading.Text" xml:space="preserve">
+    <value>Creating spreads</value>
   </data>
-  <data name="OpenButton.Content" xml:space="preserve">
-    <value>Open</value>
+  <data name="CancelButton.Content" xml:space="preserve">
+    <value>Cancel</value>
   </data>
-  <data name="ShowFolderButton.Text" xml:space="preserve">
+  <data name="PasswordInfo.Title" xml:space="preserve">
+    <value>This PDF needs a password</value>
+  </data>
+  <data name="PasswordInput.Header" xml:space="preserve">
+    <value>PDF password</value>
+  </data>
+  <data name="PasswordInput.PlaceholderText" xml:space="preserve">
+    <value>Enter the password</value>
+  </data>
+  <data name="RetryPasswordButton.Content" xml:space="preserve">
+    <value>Unlock and create</value>
+  </data>
+  <data name="DoneInfo.Title" xml:space="preserve">
+    <value>Spreads created</value>
+  </data>
+  <data name="DoneInfo.Message" xml:space="preserve">
+    <value>The new PDF is ready.</value>
+  </data>
+  <data name="OutputActionErrorInfo.Title" xml:space="preserve">
+    <value>Windows couldn’t open the output</value>
+  </data>
+  <data name="OutputActionFailed" xml:space="preserve">
+    <value>The PDF is still saved at the location shown below. Try again or open it from File Explorer.</value>
+  </data>
+  <data name="OpenOutputButton.Content" xml:space="preserve">
+    <value>Open PDF</value>
+  </data>
+  <data name="ShowFolderButton.Content" xml:space="preserve">
     <value>Show in folder</value>
   </data>
-  <data name="AnotherBookButton.Content" xml:space="preserve">
-    <value>Another book</value>
+  <data name="AnotherPdfButton.Content" xml:space="preserve">
+    <value>Convert another PDF</value>
   </data>
-  <data name="ErrorBackButton.Content" xml:space="preserve">
-    <value>Back</value>
+  <data name="ErrorInfo.Title" xml:space="preserve">
+    <value>Couldn’t create spreads</value>
+  </data>
+  <data name="RetryButton.Content" xml:space="preserve">
+    <value>Try again</value>
   </data>
   <data name="DropOverlayText.Text" xml:space="preserve">
-    <value>Drop here</value>
+    <value>Drop the PDF here</value>
   </data>
   <data name="DragCaption" xml:space="preserve">
-    <value>PDF to make into a spread</value>
+    <value>Create spreads from this PDF</value>
+  </data>
+  <data name="DropOnePdf" xml:space="preserve">
+    <value>Drop exactly one PDF file.</value>
+  </data>
+  <data name="OpenPickerTitle" xml:space="preserve">
+    <value>Choose a PDF</value>
+  </data>
+  <data name="OpenPickerCommit" xml:space="preserve">
+    <value>Choose</value>
+  </data>
+  <data name="SavePickerTitle" xml:space="preserve">
+    <value>Choose where to save the spread PDF</value>
+  </data>
+  <data name="SavePickerCommit" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="PdfFileType" xml:space="preserve">
+    <value>PDF document</value>
   </data>
   <data name="ProgressStarting" xml:space="preserve">
-    <value>Converting…</value>
+    <value>Preparing…</value>
   </data>
   <data name="ProgressFormat" xml:space="preserve">
-    <value>{0} / {1} spreads</value>
+    <value>Created {0} of {1} spreads</value>
   </data>
-  <data name="NotPdf" xml:space="preserve">
-    <value>Please choose a PDF file.</value>
+  <data name="Cancelled" xml:space="preserve">
+    <value>Conversion cancelled.</value>
   </data>
-  <data name="ErrorPdfCorrupted" xml:space="preserve">
-    <value>The PDF is corrupted or could not be read. Check whether it opens in another viewer.</value>
+  <data name="DoneAnnouncement" xml:space="preserve">
+    <value>The spread PDF is ready.</value>
   </data>
-  <data name="ErrorPdfPasswordProtected" xml:space="preserve">
-    <value>Password-protected PDFs cannot be converted. Remove the protection and try again.</value>
+  <data name="ErrorInvalidRequest" xml:space="preserve">
+    <value>Choose valid input and output PDF paths.</value>
   </data>
-  <data name="ErrorPdfNotFound" xml:space="preserve">
-    <value>File not found.</value>
+  <data name="ErrorInputNotFound" xml:space="preserve">
+    <value>The selected PDF no longer exists.</value>
   </data>
-  <data name="ErrorPdfInvalidPage" xml:space="preserve">
-    <value>Could not read the pages. Check the input PDF.</value>
+  <data name="ErrorReadFailed" xml:space="preserve">
+    <value>The selected PDF couldn’t be read. Close apps using it and check file permissions.</value>
   </data>
-  <data name="ErrorPdfWriteFailed" xml:space="preserve">
-    <value>Could not write the output. Check write permissions and free space.</value>
+  <data name="ErrorUnsupportedFile" xml:space="preserve">
+    <value>Choose exactly one PDF file.</value>
   </data>
-  <data name="ErrorInvalidParameter" xml:space="preserve">
-    <value>The settings are invalid.</value>
+  <data name="ErrorUnsupportedPdfFeature" xml:space="preserve">
+    <value>This PDF uses features that can’t survive spread conversion safely. Links and bookmarks are supported. Choose a copy without forms, notes, attachments, scripts, tags, layers, or custom metadata.</value>
+  </data>
+  <data name="ErrorPasswordRequired" xml:space="preserve">
+    <value>Enter the password used to open this PDF.</value>
+  </data>
+  <data name="ErrorInvalidPassword" xml:space="preserve">
+    <value>That password didn’t unlock the PDF. Try again.</value>
+  </data>
+  <data name="ErrorCorruptedPdf" xml:space="preserve">
+    <value>This PDF is damaged or uses a feature that can’t be read.</value>
+  </data>
+  <data name="ErrorInvalidPage" xml:space="preserve">
+    <value>One or more pages couldn’t be converted.</value>
+  </data>
+  <data name="ErrorWriteFailed" xml:space="preserve">
+    <value>The output couldn’t be saved. Check the destination and available space.</value>
   </data>
   <data name="ErrorInternal" xml:space="preserve">
-    <value>An unexpected error occurred.</value>
+    <value>An unexpected error occurred. No input PDF was changed.</value>
   </data>
 </root>
