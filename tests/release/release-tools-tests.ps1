@@ -132,7 +132,10 @@ function Write-NoticeFixture {
         [string]$Root,
 
         [Parameter()]
-        [object[]]$RestoreLogs = @()
+        [object[]]$RestoreLogs = @(),
+
+        [Parameter()]
+        [string[]]$AdditionalPackageRoots = @()
     )
 
     $packageRoot = [IO.Path]::Combine($Root, 'packages')
@@ -161,6 +164,12 @@ function Write-NoticeFixture {
     $packageFolders = [ordered]@{}
     $packageFolders[$packageRoot + [IO.Path]::DirectorySeparatorChar] =
         [ordered]@{}
+    foreach ($additionalPackageRoot in $AdditionalPackageRoots) {
+        [IO.Directory]::CreateDirectory($additionalPackageRoot) | Out-Null
+        $packageFolders[
+            $additionalPackageRoot + [IO.Path]::DirectorySeparatorChar
+        ] = [ordered]@{}
+    }
     $targetLibrary = [ordered]@{
         runtime = [ordered]@{
             'lib/net10.0/Example.Package.dll' = [ordered]@{}
@@ -465,6 +474,66 @@ try {
                 'MIT License',
                 [StringComparison]::Ordinal)) `
         -Message 'Notices omitted package identity or distributable MIT text.'
+
+    $fallbackNoticeRoot = [IO.Path]::Combine(
+        $testRoot,
+        'notices-valid-fallback')
+    $fallbackPackageRoot = [IO.Path]::Combine(
+        $fallbackNoticeRoot,
+        'fallback-packages')
+    $fallbackNoticeAssets = Write-NoticeFixture `
+        -Root $fallbackNoticeRoot `
+        -AdditionalPackageRoots @($fallbackPackageRoot)
+    $fallbackNoticeOutput = [IO.Path]::Combine(
+        $fallbackNoticeRoot,
+        'THIRD-PARTY-NOTICES.txt')
+    $fallbackNotices = Invoke-ReleaseTool `
+        -AssemblyPath $noticesAssembly `
+        -Arguments @($fallbackNoticeAssets, $fallbackNoticeOutput)
+    Assert-Condition `
+        -Condition ($fallbackNotices.ExitCode -eq 0) `
+        -Message (
+            'Notices rejected an unambiguous fallback package root: ' +
+            $fallbackNotices.Text)
+
+    $ambiguousNoticeRoot = [IO.Path]::Combine(
+        $testRoot,
+        'notices-ambiguous-roots')
+    $ambiguousFallbackRoot = [IO.Path]::Combine(
+        $ambiguousNoticeRoot,
+        'fallback-packages')
+    $ambiguousNoticeAssets = Write-NoticeFixture `
+        -Root $ambiguousNoticeRoot `
+        -AdditionalPackageRoots @($ambiguousFallbackRoot)
+    $ambiguousSource = [IO.Path]::Combine(
+        $ambiguousNoticeRoot,
+        'packages',
+        'example.package',
+        '1.2.3')
+    $ambiguousDestinationParent = [IO.Path]::Combine(
+        $ambiguousFallbackRoot,
+        'example.package')
+    [IO.Directory]::CreateDirectory($ambiguousDestinationParent) | Out-Null
+    Copy-Item `
+        -LiteralPath $ambiguousSource `
+        -Destination $ambiguousDestinationParent `
+        -Recurse
+    $ambiguousNoticeOutput = [IO.Path]::Combine(
+        $ambiguousNoticeRoot,
+        'must-not-exist.txt')
+    $ambiguousNotices = Invoke-ReleaseTool `
+        -AssemblyPath $noticesAssembly `
+        -Arguments @($ambiguousNoticeAssets, $ambiguousNoticeOutput)
+    Assert-Condition `
+        -Condition (
+            $ambiguousNotices.ExitCode -eq 1 -and
+            $ambiguousNotices.Text.Contains(
+                'multiple NuGet package folders',
+                [StringComparison]::Ordinal) -and
+            -not [IO.File]::Exists($ambiguousNoticeOutput)) `
+        -Message (
+            'Notices accepted an ambiguous package root: ' +
+            $ambiguousNotices.Text)
 
     $failedNoticeRoot = [IO.Path]::Combine($testRoot, 'notices-failed-restore')
     $failedNoticeAssets = Write-NoticeFixture `

@@ -114,7 +114,7 @@ internal static class NoticeApplication
         );
         JsonElement root = document.RootElement;
         EnsureSuccessfulRestore(root);
-        string packageFolder = GetSinglePackageFolder(root);
+        string[] packageFolders = GetPackageFolders(root);
         HashSet<string> selected = SelectPackages(root);
         JsonElement libraries = root.GetProperty("libraries");
         var notices = new List<PackageNotice>(selected.Count);
@@ -137,10 +137,7 @@ internal static class NoticeApplication
                 ?? throw new InvalidOperationException(
                     $"Package {libraryName} has no package path."
                 );
-            string packagePath = Path.GetFullPath(
-                Path.Combine(packageFolder, relativePath.Replace('/', Path.DirectorySeparatorChar))
-            );
-            EnsureDescendant(packageFolder, packagePath);
+            string packagePath = ResolvePackagePath(libraryName, relativePath, packageFolders);
             notices.Add(LoadPackageNotice(libraryName, packagePath));
         }
 
@@ -191,29 +188,75 @@ internal static class NoticeApplication
         }
     }
 
-    private static string GetSinglePackageFolder(JsonElement root)
+    private static string[] GetPackageFolders(JsonElement root)
     {
-        string[] folders =
-        [
-            .. root.GetProperty("packageFolders")
-                .EnumerateObject()
-                .Select(property => Path.GetFullPath(property.Name)),
-        ];
-        if (folders.Length != 1)
+        JsonElement packageFolders = root.GetProperty("packageFolders");
+        if (packageFolders.ValueKind != JsonValueKind.Object)
         {
             throw new InvalidOperationException(
-                $"Expected one NuGet package folder, found {folders.Length}."
+                "project.assets.json has an invalid packageFolders section."
             );
         }
 
-        if (!Directory.Exists(folders[0]))
+        string[] folders =
+        [
+            .. packageFolders.EnumerateObject().Select(property => Path.GetFullPath(property.Name)),
+        ];
+        if (folders.Length == 0)
         {
-            throw new DirectoryNotFoundException(
-                $"NuGet package folder does not exist: {folders[0]}"
+            throw new InvalidOperationException("No NuGet package folders were declared.");
+        }
+
+        if (folders.Distinct(StringComparer.OrdinalIgnoreCase).Count() != folders.Length)
+        {
+            throw new InvalidOperationException(
+                "project.assets.json declares duplicate NuGet package folders."
             );
         }
 
-        return folders[0];
+        return folders;
+    }
+
+    private static string ResolvePackagePath(
+        string libraryName,
+        string relativePath,
+        IReadOnlyList<string> packageFolders
+    )
+    {
+        var candidates = new List<string>();
+        foreach (string packageFolder in packageFolders)
+        {
+            string packagePath = Path.GetFullPath(
+                Path.Combine(packageFolder, relativePath.Replace('/', Path.DirectorySeparatorChar))
+            );
+            EnsureDescendant(packageFolder, packagePath);
+            if (!Directory.Exists(packagePath))
+            {
+                continue;
+            }
+
+            if ((File.GetAttributes(packageFolder) & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new InvalidOperationException(
+                    $"NuGet package folder is a reparse point: {packageFolder}"
+                );
+            }
+
+            EnsureNoReparsePoints(packageFolder, packagePath);
+            candidates.Add(packagePath);
+        }
+
+        return candidates.Count switch
+        {
+            1 => candidates[0],
+            0 => throw new DirectoryNotFoundException(
+                $"Restored package {libraryName} was not found beneath any declared "
+                    + "NuGet package folder."
+            ),
+            _ => throw new InvalidOperationException(
+                $"Restored package {libraryName} exists beneath multiple NuGet package folders."
+            ),
+        };
     }
 
     private static HashSet<string> SelectPackages(JsonElement root)
