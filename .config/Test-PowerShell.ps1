@@ -20,6 +20,10 @@ $scriptPaths = @(
     [IO.Path]::Combine($repositoryRoot, 'BuildAndRun.ps1'),
     [IO.Path]::Combine(
         $repositoryRoot,
+        '.config',
+        'Install-Poppler.ps1'),
+    [IO.Path]::Combine(
+        $repositoryRoot,
         'tests',
         'release',
         'release-tools-tests.ps1'),

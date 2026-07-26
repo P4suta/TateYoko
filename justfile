@@ -13,8 +13,12 @@ default:
 setup-powershell:
     if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer | Where-Object Version -EQ '1.25.0')) { Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.25.0 -Repository PSGallery -Scope CurrentUser -Force -ErrorAction Stop }
 
+# Download and verify the independent PDF renderer used by rendered golden tests.
+setup-poppler:
+    ./.config/Install-Poppler.ps1
+
 # Install the exactly pinned host toolchain.
-setup: setup-powershell
+setup: setup-powershell setup-poppler
     mise install
 
 # Restore manifest-pinned .NET tools and refresh NuGet lock files.
@@ -36,7 +40,7 @@ build:
     dotnet build TateYoko.slnx -c Release --no-restore
 
 # Run both Microsoft Testing Platform v2 test executables.
-test:
+test: setup-poppler
     dotnet test TateYoko.slnx -c Release --no-restore
 
 # Exercise the release gate executables as black boxes with valid and hostile fixtures.
@@ -44,14 +48,14 @@ release-tools-test:
     ./tests/release/release-tools-tests.ps1
 
 # Enforce deterministic line/branch budgets for Engine and application logic.
-coverage:
+coverage: setup-poppler
     if (Test-Path -LiteralPath build/coverage) { Remove-Item -LiteralPath build/coverage -Recurse -Force }
     dotnet test tests/TateYoko.Engine.Tests/TateYoko.Engine.Tests.csproj -c Release --no-restore --results-directory build/coverage/engine --coverlet
     dotnet test tests/TateYoko.App.Tests/TateYoko.App.Tests.csproj -c Release --no-restore --results-directory build/coverage/app --coverlet
     dotnet run --project tools/TateYoko.Quality -c Release --no-restore -- coverage build/coverage
 
 # Prove that Engine tests kill at least 80% of all supported mutations.
-mutation:
+mutation: setup-poppler
     $exitCode = 0; Push-Location src/TateYoko.Engine; try { dotnet stryker --skip-version-check; $exitCode = $LASTEXITCODE } finally { Pop-Location }; if ($exitCode -ne 0) { exit $exitCode }
 
 # Fail if the restored graph contains a low-or-higher known vulnerability.

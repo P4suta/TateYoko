@@ -22,6 +22,10 @@ MSIXで依存グラフが異なるため、後者2つを`packages.portable.lock.
 `packages.msix.lock.json`へ分離しています。通常の検証とCIは3グラフすべてに
 `just restore-locked`を使い、未レビューの依存解決を許しません。
 
+Rendered golden testは`just test`がPoppler 26.02.0を`build/tools/`へ取得し、
+release assetと`pdftoppm.exe`の両SHA-256を照合してから使用します。システムへの
+インストールや暗黙のrunner依存はありません。
+
 パッケージ版をローカル起動するにはWindows Developer Modeが必要です。`just run`は
 プロジェクトで固定した`Microsoft.Windows.SDK.BuildTools.WinApp`からCLIを解決するため、
 グローバルツールの追加インストールは不要です。

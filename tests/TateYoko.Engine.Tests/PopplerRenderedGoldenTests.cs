@@ -137,7 +137,7 @@ internal static class RenderedPdf
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = "pdftoppm",
+            FileName = ResolvePdfToPpm(),
             RedirectStandardError = true,
             UseShellExecute = false,
         };
@@ -159,7 +159,8 @@ internal static class RenderedPdf
         catch (Win32Exception exception)
         {
             throw new InvalidOperationException(
-                "Rendered golden tests require Poppler's pdftoppm on PATH.",
+                "The pinned Poppler renderer could not be started. Run `just setup-poppler` "
+                    + "or set TATEYOKO_PDFTOPPM to a trusted pdftoppm executable.",
                 exception
             );
         }
@@ -173,6 +174,59 @@ internal static class RenderedPdf
         );
 
         return await PpmImage.ReadAsync($"{outputPrefix}.ppm", cancellationToken);
+    }
+
+    private static string ResolvePdfToPpm()
+    {
+        string? configured = Environment.GetEnvironmentVariable("TATEYOKO_PDFTOPPM");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            string fullPath = Path.GetFullPath(configured);
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"TATEYOKO_PDFTOPPM does not identify a file: {fullPath}"
+                );
+            }
+
+            return fullPath;
+        }
+
+        for (
+            DirectoryInfo? directory = new(AppContext.BaseDirectory);
+            directory is not null;
+            directory = directory.Parent
+        )
+        {
+            if (!File.Exists(Path.Combine(directory.FullName, "TateYoko.slnx")))
+            {
+                continue;
+            }
+
+            string toolRoot = Path.Combine(directory.FullName, "build", "tools", "poppler");
+            if (!Directory.Exists(toolRoot))
+            {
+                break;
+            }
+
+            string[] candidates =
+            [
+                .. Directory
+                    .EnumerateFiles(toolRoot, "pdftoppm.exe", SearchOption.AllDirectories)
+                    .Take(2),
+            ];
+            if (candidates.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Expected one pinned pdftoppm.exe beneath {toolRoot}; "
+                        + $"found {candidates.Length}."
+                );
+            }
+
+            return candidates[0];
+        }
+
+        return "pdftoppm";
     }
 }
 
