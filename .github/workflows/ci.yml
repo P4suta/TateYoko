@@ -1,47 +1,133 @@
-# CI: build + test on every push to main and every PR.
-#
-# WinUI 3 and the NativeAOT launcher are Windows-only, so the whole solution is
-# built on windows-latest. `dotnet test` builds in Debug and does NOT invoke the
-# NativeAOT compiler (that only runs at publish), so MSVC is not needed here — the
-# heavy AOT + self-contained publish lives in release.yml. The toolchain (.NET 10)
-# is provisioned from mise.toml so CI uses the exact pinned SDK.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
-# Cancel superseded PR runs; never cancel main.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 env:
-  DOTNET_NOLOGO: "1"
+  CI: "true"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
 
 jobs:
-  test:
+  quality:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      # Provisions the pinned toolchain (.NET 10) from mise.toml.
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
 
-      # Fail the build on any unformatted code (.editorconfig rules). Same recipe
-      # devs run locally as `just fmt-check` (or `just fmt` to fix in place).
-      - name: Format check
-        run: mise exec -- just fmt-check
+      - name: Install pinned PowerShell analyzer
+        run: mise exec -- just setup-powershell
 
-      # Builds the whole solution (Core, Pdf, App/WinUI, Launcher, tools) and runs
-      # the Core unit tests + Pdf integration tests. `just ci` runs both steps locally.
-      - name: Test
-        run: mise exec -- just test
+      - name: Format, compile, contract-test, coverage, audit, notices, and mutation
+        run: mise exec -- just ci
+
+      - name: Prove x64/ARM64 portable and MSIX packaging
+        run: mise exec -- just dist-build 0.0.1
+
+      - name: Upload diagnostic quality reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quality-reports
+          path: |
+            build/coverage
+            build/legal
+            src/TateYoko.Engine/StrykerOutput
+          if-no-files-found: warn
+          retention-days: 7
+
+  dependency-review:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Reject vulnerable or disallowed new dependencies
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          fail-on-scopes: runtime, development, unknown
+          allow-licenses: >-
+            0BSD, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MIT,
+            MS-PL, Unicode-3.0, Zlib
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan the complete Git history for credentials
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  codeql:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          languages: csharp
+          build-mode: manual
+          queries: security-and-quality
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install: true
+
+      - name: Locked restore and strict build
+        run: |
+          mise exec -- just restore-locked
+          mise exec -- just build
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          category: /language:csharp
+
+  # Keep this job id stable: the default-branch ruleset requires the `test` context.
+  # It is deliberately an aggregator so no PR can merge while a security job is failing.
+  test:
+    if: ${{ always() }}
+    needs: [quality, dependency-review, secrets, codeql]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every quality and security gate
+        env:
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          SECRETS_RESULT: ${{ needs.secrets.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$QUALITY_RESULT" = "success"
+          test "$SECRETS_RESULT" = "success"
+          test "$CODEQL_RESULT" = "success"
+          test "$DEPENDENCY_REVIEW_RESULT" = "success" \
+            || test "$DEPENDENCY_REVIEW_RESULT" = "skipped"

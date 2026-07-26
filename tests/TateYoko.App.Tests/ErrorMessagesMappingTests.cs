@@ -1,44 +1,34 @@
 using TateYoko.App.Services;
-using TateYoko.Core.Domain;
+using TateYoko.Engine;
 
 namespace TateYoko.App.Tests;
 
-/// <summary>
-/// Tests the pure <see cref="ErrorKind"/>-to-resource-key mapping in <see cref="ErrorMessages"/>.
-/// Only the mapping (no resource load) is exercised, so no WinUI resource runtime is required.
-/// </summary>
 public sealed class ErrorMessagesMappingTests
 {
     [Theory]
-    [InlineData(ErrorKind.PdfCorrupted, "ErrorPdfCorrupted")]
-    [InlineData(ErrorKind.PdfPasswordProtected, "ErrorPdfPasswordProtected")]
-    [InlineData(ErrorKind.PdfNotFound, "ErrorPdfNotFound")]
-    [InlineData(ErrorKind.PdfInvalidPage, "ErrorPdfInvalidPage")]
-    [InlineData(ErrorKind.PdfWriteFailed, "ErrorPdfWriteFailed")]
-    [InlineData(ErrorKind.InvalidParameter, "ErrorInvalidParameter")]
-    [InlineData(ErrorKind.Internal, "ErrorInternal")]
-    public void MapsEachErrorKindToItsResourceKey(ErrorKind kind, string expectedKey) =>
-        Assert.Equal(expectedKey, ErrorMessages.ResourceKeyForKind(kind));
+    [InlineData(PdfSpreadError.InvalidRequest, "ErrorInvalidRequest")]
+    [InlineData(PdfSpreadError.InputNotFound, "ErrorInputNotFound")]
+    [InlineData(PdfSpreadError.ReadFailed, "ErrorReadFailed")]
+    [InlineData(PdfSpreadError.UnsupportedFile, "ErrorUnsupportedFile")]
+    [InlineData(PdfSpreadError.PasswordRequired, "ErrorPasswordRequired")]
+    [InlineData(PdfSpreadError.InvalidPassword, "ErrorInvalidPassword")]
+    [InlineData(PdfSpreadError.CorruptedPdf, "ErrorCorruptedPdf")]
+    [InlineData(PdfSpreadError.InvalidPage, "ErrorInvalidPage")]
+    [InlineData(PdfSpreadError.WriteFailed, "ErrorWriteFailed")]
+    [InlineData(PdfSpreadError.Internal, "ErrorInternal")]
+    [InlineData(PdfSpreadError.UnsupportedPdfFeature, "ErrorUnsupportedPdfFeature")]
+    public void MapsEveryError(PdfSpreadError error, string expected) =>
+        Assert.Equal(expected, ErrorMessages.ResourceKey(error));
 
     [Fact]
-    public void UndefinedErrorKindFallsBackToInternal() =>
-        Assert.Equal("ErrorInternal", ErrorMessages.ResourceKeyForKind((ErrorKind)999));
+    public void UndefinedErrorFallsBackToInternal() =>
+        Assert.Equal("ErrorInternal", ErrorMessages.ResourceKey((PdfSpreadError)int.MaxValue));
 
     [Fact]
-    public void EveryDefinedErrorKindMapsToANonEmptyKey()
+    public void EveryDefinedErrorHasADistinctResource()
     {
-        foreach (ErrorKind kind in Enum.GetValues<ErrorKind>())
-        {
-            Assert.False(string.IsNullOrWhiteSpace(ErrorMessages.ResourceKeyForKind(kind)));
-        }
-    }
+        string[] keys = [.. Enum.GetValues<PdfSpreadError>().Select(ErrorMessages.ResourceKey)];
 
-    [Fact]
-    public void EveryNonInternalErrorKindMapsToADistinctKey()
-    {
-        // Only the Internal fallback key may be shared (the default arm); the rest must be unique.
-        ErrorKind[] kinds = Enum.GetValues<ErrorKind>();
-        var distinctKeys = kinds.Select(ErrorMessages.ResourceKeyForKind).Distinct().ToList();
-        Assert.Equal(kinds.Length, distinctKeys.Count);
+        Assert.Equal(keys.Length, keys.Distinct(StringComparer.Ordinal).Count());
     }
 }

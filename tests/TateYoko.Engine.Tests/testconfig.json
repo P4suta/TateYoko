@@ -1,0 +1,16 @@
+{
+  "platformOptions": {
+    "Coverlet": {
+      "Include": "[TateYoko.Engine]*",
+      "Exclude": "[*.Tests]*,[coverlet.*]*",
+      "ExcludeByAttribute": "GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute",
+      "Format": "cobertura,json",
+      "UseSourceLink": false,
+      "SingleHit": false,
+      "IncludeTestAssembly": false,
+      "SkipAutoProps": false,
+      "DeterministicReport": true,
+      "ExcludeAssembliesWithoutSources": "MissingAll"
+    }
+  }
+}

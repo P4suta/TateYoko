@@ -1,14 +1,42 @@
 using System.Diagnostics;
-using TateYoko.Presentation.Abstractions;
 
 namespace TateYoko.App.Services;
 
-/// <summary><see cref="IShellLauncher"/> backed by <see cref="Process"/> with shell execution.</summary>
-public sealed class ShellLauncher : IShellLauncher
+internal sealed class ShellLauncher : IShellLauncher
 {
-    public void Open(string path) =>
-        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+    public void Open(string path)
+    {
+        string validated = ValidateExistingFile(path);
+        Start(new ProcessStartInfo(validated) { UseShellExecute = true });
+    }
 
-    public void ShowInFolder(string path) =>
-        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
+    public void ShowInFolder(string path)
+    {
+        string validated = ValidateExistingFile(path);
+        var startInfo = new ProcessStartInfo(
+            Path.Combine(Environment.SystemDirectory, "explorer.exe")
+        )
+        {
+            UseShellExecute = false,
+        };
+        startInfo.ArgumentList.Add("/select," + validated);
+        Start(startInfo);
+    }
+
+    private static string ValidateExistingFile(string path)
+    {
+        if (!Path.IsPathFullyQualified(path) || !File.Exists(path))
+        {
+            throw new InvalidOperationException("The requested output is unavailable.");
+        }
+
+        return Path.GetFullPath(path);
+    }
+
+    private static void Start(ProcessStartInfo startInfo)
+    {
+        using Process process =
+            Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Windows did not start the requested action.");
+    }
 }

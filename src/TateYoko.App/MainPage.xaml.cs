@@ -1,45 +1,61 @@
-using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.Windows.Storage.Pickers;
 using TateYoko.App.Services;
-using TateYoko.Presentation.ViewModels;
+using TateYoko.App.ViewModels;
+using TateYoko.Engine;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
-using Windows.Storage.Pickers;
 
 namespace TateYoko.App;
 
-/// <summary>
-/// The single conversion page. Handles UI/platform actions (drag-and-drop, file picking) and
-/// delegates state and conversion to <see cref="MainViewModel"/>.
-/// </summary>
+/// <summary>The single PDF conversion surface and its Windows platform integrations.</summary>
 public sealed partial class MainPage : Page
 {
-    public MainPage()
+    private readonly WindowId _windowId;
+    private bool _detached;
+
+    internal MainPage(MainViewModel viewModel, WindowId windowId)
     {
+        ArgumentNullException.ThrowIfNull(viewModel);
+        ViewModel = viewModel;
+        _windowId = windowId;
         InitializeComponent();
-        ViewModel = App.Services.GetRequiredService<MainViewModel>();
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
-    public MainViewModel ViewModel { get; }
+    internal MainViewModel ViewModel { get; }
 
-    /// <summary>bool to Visibility helper for x:Bind.</summary>
-    public Visibility ShowIf(bool condition) => condition ? Visibility.Visible : Visibility.Collapsed;
+    internal void Detach()
+    {
+        if (_detached)
+        {
+            return;
+        }
+
+        _detached = true;
+        ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+    }
 
     private void OnDragOver(object sender, DragEventArgs e)
     {
-        if (e.DataView.Contains(StandardDataFormats.StorageItems))
-        {
-            e.AcceptedOperation = DataPackageOperation.Copy;
-            e.DragUIOverride.Caption = Localized.Get("DragCaption");
-            e.DragUIOverride.IsGlyphVisible = true;
-            DragOverlay.Visibility = Visibility.Visible;
-        }
-        else
+        if (ViewModel.IsConverting || !e.DataView.Contains(StandardDataFormats.StorageItems))
         {
             e.AcceptedOperation = DataPackageOperation.None;
+            DragOverlay.Visibility = Visibility.Collapsed;
+            return;
         }
+
+        e.AcceptedOperation = DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = Localized.Get("DragCaption");
+        e.DragUIOverride.IsCaptionVisible = true;
+        e.DragUIOverride.IsGlyphVisible = true;
+        DragOverlay.Visibility = Visibility.Visible;
     }
 
     private void OnDragLeave(object sender, DragEventArgs e) =>
@@ -48,8 +64,7 @@ public sealed partial class MainPage : Page
     private async void OnDrop(object sender, DragEventArgs e)
     {
         DragOverlay.Visibility = Visibility.Collapsed;
-
-        if (!e.DataView.Contains(StandardDataFormats.StorageItems))
+        if (ViewModel.IsConverting || !e.DataView.Contains(StandardDataFormats.StorageItems))
         {
             return;
         }
@@ -57,11 +72,26 @@ public sealed partial class MainPage : Page
         DragOperationDeferral deferral = e.GetDeferral();
         try
         {
-            IReadOnlyList<IStorageItem> items = await e.DataView.GetStorageItemsAsync();
-            if (items.FirstOrDefault(i => i is StorageFile) is StorageFile file)
+            IReadOnlyList<IStorageItem> items = await e
+                .DataView.GetStorageItemsAsync()
+                .AsTask()
+                .ConfigureAwait(true);
+            if (_detached)
             {
-                ViewModel.SetInput(file.Path);
+                return;
             }
+
+            if (items.Count != 1 || items[0] is not StorageFile file)
+            {
+                ViewModel.ShowSelectionError(Localized.Get("DropOnePdf"));
+                return;
+            }
+
+            ViewModel.SetInput(file.Path);
+        }
+        catch (Exception exception)
+        {
+            ReportUnexpectedError(exception);
         }
         finally
         {
@@ -69,24 +99,162 @@ public sealed partial class MainPage : Page
         }
     }
 
-    // While idle, a click anywhere on the window opens the file picker.
-    private async void OnRootTapped(object sender, TappedRoutedEventArgs e)
+    private async void OnChoosePdfClicked(object sender, RoutedEventArgs e) =>
+        await PickPdfAsync().ConfigureAwait(true);
+
+    private async void OnOpenAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args
+    )
     {
-        if (!ViewModel.IsIdle)
+        args.Handled = true;
+        await PickPdfAsync().ConfigureAwait(true);
+    }
+
+    private async Task PickPdfAsync()
+    {
+        if (_detached || ViewModel.IsConverting)
         {
             return;
         }
 
-        var picker = new FileOpenPicker();
-        picker.FileTypeFilter.Add(".pdf");
-
-        // Unpackaged apps must associate the picker with the HWND.
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
-
-        StorageFile? file = await picker.PickSingleFileAsync();
-        if (file is not null)
+        try
         {
-            ViewModel.SetInput(file.Path);
+            var picker = new FileOpenPicker(_windowId)
+            {
+                Title = Localized.Get("OpenPickerTitle"),
+                CommitButtonText = Localized.Get("OpenPickerCommit"),
+            };
+            picker.FileTypeFilter.Add(".pdf");
+            PickFileResult? result = await picker
+                .PickSingleFileAsync()
+                .AsTask()
+                .ConfigureAwait(true);
+            if (!_detached && result is not null)
+            {
+                ViewModel.SetInput(result.Path);
+            }
         }
+        catch (Exception exception)
+        {
+            ReportUnexpectedError(exception);
+        }
+    }
+
+    private async void OnChangeOutputClicked(object sender, RoutedEventArgs e)
+    {
+        if (_detached)
+        {
+            return;
+        }
+
+        try
+        {
+            var picker = new FileSavePicker(_windowId)
+            {
+                Title = Localized.Get("SavePickerTitle"),
+                CommitButtonText = Localized.Get("SavePickerCommit"),
+                SuggestedFileName = ViewModel.OutputFileName,
+                DefaultFileExtension = ".pdf",
+                ShowOverwritePrompt = true,
+            };
+            picker.FileTypeChoices.Add(Localized.Get("PdfFileType"), [".pdf"]);
+            PickFileResult? result = await picker.PickSaveFileAsync().AsTask().ConfigureAwait(true);
+            if (!_detached && result is not null)
+            {
+                ViewModel.SetExplicitOutput(result.Path);
+            }
+        }
+        catch (Exception exception)
+        {
+            ReportUnexpectedError(exception);
+        }
+    }
+
+    private void OnOpeningModeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        FirstPageMode? mode = OpeningModeRadioButtons.SelectedIndex switch
+        {
+            0 => FirstPageMode.Standard,
+            1 => FirstPageMode.Cover,
+            2 => FirstPageMode.LeadingBlank,
+            _ => null,
+        };
+        if (mode is FirstPageMode selectedMode)
+        {
+            ViewModel.SetFirstPageMode(selectedMode);
+        }
+    }
+
+    private async void OnRetryPasswordClicked(object sender, RoutedEventArgs e)
+    {
+        if (_detached)
+        {
+            return;
+        }
+
+        string password = PasswordInput.Password;
+        PasswordInput.Password = string.Empty;
+        await ViewModel.ConvertWithPasswordAsync(password).ConfigureAwait(true);
+    }
+
+    private void ReportUnexpectedError(Exception exception)
+    {
+        if (!_detached)
+        {
+            ViewModel.ShowUnexpectedError(exception);
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_detached || e.PropertyName != nameof(MainViewModel.State))
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_detached)
+            {
+                return;
+            }
+
+            FocusState state = FocusState.Programmatic;
+            switch (ViewModel.State)
+            {
+                case ConversionState.Idle:
+                    ChoosePdfButton?.Focus(state);
+                    break;
+                case ConversionState.Ready:
+                    ConvertButton?.Focus(state);
+                    break;
+                case ConversionState.Converting:
+                    CancelButton?.Focus(state);
+                    break;
+                case ConversionState.PasswordRequired:
+                    PasswordInput?.Focus(state);
+                    break;
+                case ConversionState.Done:
+                    OpenOutputButton?.Focus(state);
+                    break;
+                case ConversionState.Error:
+                    if (ViewModel.RetryCommand.CanExecute(null))
+                    {
+                        RetryButton?.Focus(state);
+                    }
+                    else
+                    {
+                        ErrorChooseAnotherButton?.Focus(state);
+                    }
+
+                    break;
+            }
+
+            AutomationPeer? peer =
+                FrameworkElementAutomationPeer.FromElement(LiveRegionText)
+                ?? FrameworkElementAutomationPeer.CreatePeerForElement(LiveRegionText);
+            peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        });
     }
 }

@@ -39,7 +39,6 @@ WriteSquare(24, "Square44x44Logo.targetsize-24_altform-unplated.png");
 WriteSquare(48, "Square44x44Logo.targetsize-48_altform-lightunplated.png");
 WriteSquare(300, "Square150x150Logo.scale-200.png");
 WriteSquare(50, "StoreLogo.png");
-WriteSquare(48, "LockScreenLogo.scale-200.png");
 WriteCanvas(620, 300, "Wide310x150Logo.scale-200.png");
 WriteCanvas(620, 300, "SplashScreen.scale-200.png");
 
@@ -94,5 +93,7 @@ static string FindRepoRoot()
             return dir.FullName;
         dir = dir.Parent;
     }
-    throw new InvalidOperationException("Could not locate the repository root (TateYoko.slnx not found).");
+    throw new InvalidOperationException(
+        "Could not locate the repository root (TateYoko.slnx not found)."
+    );
 }
