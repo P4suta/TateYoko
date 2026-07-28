@@ -85,8 +85,6 @@ jobs:
         with:
           name: unsigned-signing-input
           path: |
-            publish/unsigned/TateYoko-win-x64.exe
-            publish/unsigned/TateYoko-win-arm64.exe
             publish/unsigned/TateYoko.msixbundle
             publish/unsigned/TateYoko.appinstaller
           if-no-files-found: error
@@ -98,6 +96,7 @@ jobs:
           name: release-evidence
           path: |
             build/sbom/tateyoko.cdx.json
+            build/sbom/tateyoko-sources.spdx
             build/legal/THIRD-PARTY-NOTICES.txt
           if-no-files-found: error
           retention-days: 1
@@ -147,7 +146,7 @@ jobs:
           $version = $env:TAG.Substring(1)
           mise exec -- just sign-stage $version
 
-      - name: Authenticode-sign and timestamp portable EXEs and the MSIX bundle
+      - name: Authenticode-sign and timestamp the MSIX bundle
         uses: SSLcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
         with:
           command: batch_sign
@@ -174,16 +173,12 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  publish:
+  package:
     needs: sign
-    if: ${{ inputs.publish }}
     runs-on: windows-latest
     timeout-minutes: 25
-    environment: release
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -216,6 +211,31 @@ jobs:
           mise exec -- just sign-verify $version
           mise exec -- just package $version
 
+      - name: Upload the exact verified release candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-candidate
+          path: publish/package
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: package
+    if: ${{ inputs.publish }}
+    runs-on: windows-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download the already verified release candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate
+          path: publish/package
+
       - name: Attest build provenance
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
@@ -225,8 +245,6 @@ jobs:
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
         with:
           subject-path: |
-            publish/package/TateYoko-win-x64.zip
-            publish/package/TateYoko-win-arm64.zip
             publish/package/TateYoko.msixbundle
           sbom-path: publish/package/tateyoko.cdx.json
 

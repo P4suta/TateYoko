@@ -1,4 +1,4 @@
-# 縦横 (TateYoko) — the one local/CI command surface.
+# TateYoko's local and CI command surface.
 # Windows 11 is the only supported development and release host.
 
 set shell := ["pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command"]
@@ -25,14 +25,12 @@ setup: setup-powershell setup-poppler
 restore:
     dotnet tool restore
     dotnet restore TateYoko.slnx
-    dotnet restore src/TateYoko.App/TateYoko.App.csproj --force-evaluate -p:DistributionMode=Portable -p:PublishReadyToRun=true
     dotnet restore src/TateYoko.App/TateYoko.App.csproj --force-evaluate -p:DistributionMode=Msix -p:PublishReadyToRun=true
 
 # Reproduce only the committed dependency graph; CI and releases use this.
 restore-locked:
     dotnet tool restore
     dotnet restore TateYoko.slnx --locked-mode
-    dotnet restore src/TateYoko.App/TateYoko.App.csproj --locked-mode -p:DistributionMode=Portable -p:PublishReadyToRun=true
     dotnet restore src/TateYoko.App/TateYoko.App.csproj --locked-mode -p:DistributionMode=Msix -p:PublishReadyToRun=true
 
 # Compile every product, test, and release-gate project with strict analyzers.
@@ -54,7 +52,7 @@ coverage: setup-poppler
     dotnet test tests/TateYoko.App.Tests/TateYoko.App.Tests.csproj -c Release --no-restore --results-directory build/coverage/app --coverlet
     dotnet run --project tools/TateYoko.Quality -c Release --no-restore -- coverage build/coverage
 
-# Prove that Engine tests kill at least 80% of all supported mutations.
+# Prove that Engine tests kill at least 90% of all supported mutations.
 mutation: setup-poppler
     $exitCode = 0; Push-Location src/TateYoko.Engine; try { dotnet stryker --skip-version-check; $exitCode = $LASTEXITCODE } finally { Pop-Location }; if ($exitCode -ne 0) { exit $exitCode }
 
@@ -68,10 +66,12 @@ audit:
 notices:
     dotnet run --project tools/TateYoko.Notices -c Release --no-restore -- src/TateYoko.App/obj/project.assets.json build/legal/THIRD-PARTY-NOTICES.txt
 
-# Generate a CycloneDX JSON SBOM for shipped runtime dependencies.
+# Generate runtime and source-file SBOMs only from a REUSE-compliant tree.
 sbom version=version:
+    reuse lint
     New-Item -ItemType Directory -Force build/sbom | Out-Null
     dotnet CycloneDX src/TateYoko.App/TateYoko.App.csproj -o build/sbom -F Json -fn tateyoko.cdx.json -sv {{version}} -sn TateYoko -st Application -ed
+    reuse spdx --creator-person "Yasunobu Sakashita" -o build/sbom/tateyoko-sources.spdx
 
 # Build, register, and launch the packaged development app through the pinned WinApp CLI.
 run:
@@ -85,6 +85,10 @@ ui-test app_pid:
 icons:
     dotnet run --project tools/TateYoko.Icons -c Release --no-restore
 
+# Prove generated icon assets are current and byte-for-byte deterministic.
+icons-check:
+    ./.config/Test-Icons.ps1
+
 # Format every checked-in C# source deterministically without evaluating WinUI generated files.
 fmt:
     dotnet tool run csharpier format .
@@ -97,11 +101,19 @@ fmt-check:
 actions-check:
     actionlint
 
+# Check spelling in source, tests, configuration, documentation, and translations.
+typos-check:
+    typos
+
 # Reject every PowerShell analyzer diagnostic, including information-level rules.
 powershell-check:
     ./.config/Test-PowerShell.ps1
 
-# Build unsigned x64/ARM64 portable executables and an MSIX bundle.
+# Require complete, machine-readable copyright and license information for every file.
+reuse-lint:
+    reuse lint
+
+# Build and validate the unsigned x64/ARM64 MSIX bundle.
 dist-build version=version:
     dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- build --version {{version}}
 
@@ -126,7 +138,7 @@ list-signable:
     dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- list-signable
 
 # Full merge gate. The dependency graph and every executable are version-pinned.
-ci: restore-locked actions-check powershell-check fmt-check build release-tools-test test coverage audit notices mutation
+ci: restore-locked reuse-lint typos-check actions-check powershell-check fmt-check build icons-check release-tools-test test coverage audit notices mutation
 
 # Remove only known generated directories beneath the repository.
 clean:

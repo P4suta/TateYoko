@@ -12,7 +12,7 @@ internal interface IUiStrings
 
     string OutputActionFailed { get; }
 
-    string ForError(PdfSpreadError error);
+    string ForError(PdfSpreadError error, string? technicalDetail = null);
 
     string Progress(int completed, int total);
 }

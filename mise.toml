@@ -1,20 +1,13 @@
-# Toolchain managed by mise; `mise install` sets up the environment.
-#
-# mise's job here is purely to pin the toolchain. Developer commands live in the
-# justfile (the single source of truth shared by local dev and CI) — run them with
-# `mise exec -- just <recipe>` (or `just <recipe>` with mise activated).
 [tools]
 dotnet = "10.0.302"
-# Command runner. Pinned like dotnet so CI and every machine get the same just.
 just = "1.54.0"
-# GitHub Actions syntax, expression, dependency, and injection checker.
 actionlint = "1.7.12"
+typos = "1.47.0"
+python = "3.14.6"
+"pipx:reuse" = "6.2.0"
 
-# Host-side helper (Git hooks). Not needed for the build itself.
 lefthook = "2.1.9"
-# Conventional Commits linter for the lefthook commit-msg hook.
 "cargo:committed" = "1.1.11"
 
 [settings]
-# Allow the dotnet backend's symlink strategy.
 experimental = true

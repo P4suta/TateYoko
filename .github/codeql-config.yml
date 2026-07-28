@@ -1,0 +1,12 @@
+name: TateYoko source analysis
+
+paths:
+  - src
+  - tests
+  - tools
+
+paths-ignore:
+  - "**/bin/**"
+  - "**/obj/**"
+  - build
+  - publish

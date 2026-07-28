@@ -1,0 +1,19 @@
+version = 1
+SPDX-PackageName = "TateYoko"
+SPDX-PackageSupplier = "Person: Yasunobu Sakashita"
+SPDX-PackageDownloadLocation = "https://github.com/P4suta/TateYoko"
+
+[[annotations]]
+path = "**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 TateYoko contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".github/CODE_OF_CONDUCT.md"
+precedence = "override"
+SPDX-FileCopyrightText = [
+    "2014-2021 Contributor Covenant contributors",
+    "2026 TateYoko contributors",
+]
+SPDX-License-Identifier = "CC-BY-4.0"

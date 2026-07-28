@@ -1,22 +1,5 @@
-# release-please — the version / CHANGELOG / tag bot.
-#
-# Conventional Commits land on main -> this action keeps a "Release PR" open that
-# bumps the version and updates CHANGELOG.md. Merging that PR (squash) makes
-# release-please create the GitHub Release as a DRAFT (config "draft": true) and
-# the vX.Y.Z tag, then dispatch release.yml, which builds -> signs -> attaches
-# assets to the draft -> publishes it. Humans never hand-pick a version.
-#
-# Runs as a GitHub App (actions/create-github-app-token) rather than the default
-# GITHUB_TOKEN. This is REQUIRED because main is protected by a ruleset that needs
-# the `test` check to pass before a PR can merge: a GITHUB_TOKEN-opened PR does NOT
-# trigger CI (GitHub's recursion guard), so its required check would never run and
-# the Release PR could never merge. An App-token PR does trigger CI. The App also
-# gives the release commit + tag a signed, first-class identity. The release.yml
-# dispatch still uses GITHUB_TOKEN — a workflow_dispatch is the one event it may start.
-#
-# Dormant until configured: with the App secrets unset the job runs green and
-# no-ops. The secrets live in the `release-please` environment (deployment-branch
-# policy: main only, no required reviewers — it must run unattended). See docs/RELEASING.md.
+# GITHUB_TOKEN-authored pull requests do not trigger the protected branch's required
+# CI workflow, so release-please uses a GitHub App. See docs/RELEASING.md.
 name: release-please
 
 on:
@@ -37,16 +20,12 @@ jobs:
     timeout-minutes: 10
     environment: release-please
     permissions:
-      contents: write # create the release commit + draft Release + tag
-      pull-requests: write # open / maintain the Release PR
-      actions: write # dispatch release.yml once the draft Release is created
+      contents: write
+      pull-requests: write
+      actions: write
     env:
-      # Server-side boolean — never exposes the secret values.
       HAS_APP: ${{ secrets.RELEASE_PLEASE_CLIENT_ID != '' && secrets.RELEASE_PLEASE_PRIVATE_KEY != '' }}
     steps:
-      # Mint a short-lived installation token scoped to this repo. Its PRs DO
-      # trigger CI (unlike GITHUB_TOKEN's), so the Release PR's required `test`
-      # check runs and the PR becomes mergeable.
       - name: Mint GitHub App token
         id: app-token
         if: env.HAS_APP == 'true'
@@ -64,8 +43,6 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # The draft Release fires no `release` event, so explicitly kick off the
-      # signed build. Publishing (in release.yml) is what makes the release public.
       - name: Trigger the signed-release build
         if: ${{ env.HAS_APP == 'true' && steps.rp.outputs.release_created == 'true' }}
         env:

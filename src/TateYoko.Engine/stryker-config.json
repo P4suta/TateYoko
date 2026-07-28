@@ -7,7 +7,7 @@
     "configuration": "Release",
     "target-framework": "net10.0",
     "mutation-level": "Complete",
-    "coverage-analysis": "perTest",
+    "coverage-analysis": "all",
     "reporters": [
       "progress",
       "cleartext",
@@ -15,9 +15,9 @@
       "json"
     ],
     "thresholds": {
-      "high": 90,
-      "low": 85,
-      "break": 80
+      "high": 95,
+      "low": 90,
+      "break": 90
     },
     "additional-timeout": 3000,
     "break-on-initial-test-failure": true

@@ -31,13 +31,18 @@ internal static class Pagination
 {
     internal static int Count(FirstPageMode mode, int totalPages)
     {
-        Validate(mode, totalPages);
-        return mode == FirstPageMode.Standard ? (totalPages + 1) / 2 : 1 + (totalPages / 2);
+        ValidateTotal(totalPages);
+        return mode switch
+        {
+            FirstPageMode.Standard => (totalPages + 1) / 2,
+            FirstPageMode.Cover or FirstPageMode.LeadingBlank => 1 + (totalPages / 2),
+            _ => throw UndefinedMode(),
+        };
     }
 
     internal static IEnumerable<PageGroup> Enumerate(FirstPageMode mode, int totalPages)
     {
-        Validate(mode, totalPages);
+        ValidateTotal(totalPages);
 
         int start;
         switch (mode)
@@ -54,10 +59,7 @@ internal static class Pagination
                 start = 1;
                 break;
             default:
-                throw new PdfSpreadException(
-                    PdfSpreadError.InvalidRequest,
-                    "undefined-first-page-mode"
-                );
+                throw UndefinedMode();
         }
 
         for (int pageIndex = start; pageIndex < totalPages; pageIndex += 2)
@@ -68,12 +70,14 @@ internal static class Pagination
         }
     }
 
-    private static void Validate(FirstPageMode mode, int totalPages)
+    private static void ValidateTotal(int totalPages)
     {
-        Guard.Defined(mode, nameof(mode));
         if (totalPages <= 0)
         {
             throw new PdfSpreadException(PdfSpreadError.InvalidPage, "empty-document");
         }
     }
+
+    private static PdfSpreadException UndefinedMode() =>
+        new(PdfSpreadError.InvalidRequest, "undefined-first-page-mode");
 }

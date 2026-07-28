@@ -135,10 +135,10 @@ function Wait-PickerWindow {
             ConvertFrom-Json
         $candidate = $windows |
             Where-Object {
-                $_.title -ne 'PopupHost' -and
-                $_.hwnd -ne $script:mainHwnd
+                $_.ownerHwnd -eq $script:mainHwnd -and
+                $_.className -eq '#32770'
             } |
-            Select-Object -Last 1
+            Select-Object -First 1
         if ($candidate) {
             return $candidate.hwnd
         }
@@ -149,6 +149,106 @@ function Wait-PickerWindow {
     throw 'The Windows file picker did not appear within five seconds.'
 }
 
+function Get-PickerSelector {
+    param(
+        [Parameter(Mandatory)][string]$AutomationId,
+        [Parameter(Mandatory)][string]$Type
+    )
+
+    $search = winapp ui search $AutomationId -w $script:pickerHwnd --json 2>$null |
+        ConvertFrom-Json
+    $selectorMatches = @(
+        $search.matches |
+            Where-Object {
+                $_.automationId -eq $AutomationId -and
+                $_.type -eq $Type
+            }
+    )
+    if ($selectorMatches.Count -ne 1) {
+        throw (
+            "Expected one $Type with AutomationId $AutomationId in picker " +
+            "$($script:pickerHwnd); found $($selectorMatches.Count)."
+        )
+    }
+
+    return $selectorMatches[0].selector
+}
+
+function Get-PickerFileNameSelector {
+    foreach ($candidate in @(
+        @{ AutomationId = '1001'; Type = 'Edit' }
+        @{ AutomationId = '1148'; Type = 'Edit' }
+    )) {
+        $search = winapp ui search `
+            $candidate.AutomationId `
+            -w $script:pickerHwnd `
+            --json `
+            2>$null |
+            ConvertFrom-Json
+        $selectorMatches = @(
+            $search.matches |
+                Where-Object {
+                    $_.automationId -eq $candidate.AutomationId -and
+                    $_.type -eq $candidate.Type
+                }
+        )
+        if ($selectorMatches.Count -eq 1) {
+            return $selectorMatches[0].selector
+        }
+
+        if ($selectorMatches.Count -gt 1) {
+            throw (
+                "Expected at most one $($candidate.Type) with AutomationId " +
+                "$($candidate.AutomationId) in picker $($script:pickerHwnd); " +
+                "found $($selectorMatches.Count)."
+            )
+        }
+    }
+
+    throw "The file name editor was not found in picker $($script:pickerHwnd)."
+}
+
+function Wait-PickerClosed {
+    param([Parameter(Mandatory)][long]$Hwnd)
+
+    for ($attempt = 0; $attempt -lt 50; $attempt++) {
+        $windows = winapp ui list-windows -a $AppPid --json 2>$null |
+            ConvertFrom-Json
+        if (-not ($windows | Where-Object { $_.hwnd -eq $Hwnd })) {
+            return
+        }
+
+        Start-Sleep -Milliseconds 100
+    }
+
+    throw "The Windows file picker $Hwnd did not close within five seconds."
+}
+
+function Invoke-PickerButton {
+    param([Parameter(Mandatory)][string]$AutomationId)
+
+    $selector = Get-PickerSelector -AutomationId $AutomationId -Type 'Button'
+    $hwnd = $script:pickerHwnd
+    winapp ui invoke $selector -w $hwnd
+    Wait-PickerClosed -Hwnd $hwnd
+}
+
+function Complete-PdfSelection {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ExpectedFileName
+    )
+
+    $fileNameSelector = Get-PickerFileNameSelector
+    winapp ui set-value $fileNameSelector $Path -w $script:pickerHwnd
+    Invoke-PickerButton -AutomationId '1'
+    winapp ui wait-for `
+        'InputFileText' `
+        -w $script:mainHwnd `
+        --value $ExpectedFileName `
+        -t 5000
+}
+
 function Select-PdfThroughPicker {
     param(
         [Parameter(Mandatory)][string]$ButtonId,
@@ -156,30 +256,37 @@ function Select-PdfThroughPicker {
         [Parameter(Mandatory)][string]$ExpectedFileName
     )
 
-    winapp ui invoke $ButtonId -a $AppPid
+    winapp ui invoke $ButtonId -w $script:mainHwnd
     $script:pickerHwnd = Wait-PickerWindow
-    winapp ui set-value 'FileNameControlHost' $Path -w $script:pickerHwnd
-    winapp ui invoke '1' -w $script:pickerHwnd
-    winapp ui wait-for 'InputFileText' -a $AppPid --value $ExpectedFileName -t 5000
+    Complete-PdfSelection -Path $Path -ExpectedFileName $ExpectedFileName
 }
 
-function Select-OutputThroughPicker {
+function Select-ConversionOutput {
     param(
+        [Parameter(Mandatory)][string]$ButtonId,
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$ExpectedFileName
+        [Parameter(Mandatory)][string]$ExpectedSuggestion
     )
 
-    winapp ui invoke 'ChangeOutputButton' -a $AppPid
+    winapp ui invoke $ButtonId -w $script:mainHwnd
     $script:pickerHwnd = Wait-PickerWindow
-    winapp ui set-value 'FileNameControlHost' $Path -w $script:pickerHwnd
-    winapp ui invoke '1' -w $script:pickerHwnd
-    winapp ui wait-for 'OutputFileText' -a $AppPid --value $ExpectedFileName -t 5000
+    $fileNameSelector = Get-PickerFileNameSelector
+    winapp ui wait-for `
+        $fileNameSelector `
+        -w $script:pickerHwnd `
+        --value $ExpectedSuggestion `
+        -t 3000
+    winapp ui set-value $fileNameSelector $Path -w $script:pickerHwnd
+    Invoke-PickerButton -AutomationId '1'
 }
 
 function Save-Screenshot {
     param([Parameter(Mandatory)][string]$Name)
 
-    winapp ui screenshot -a $AppPid -o (Join-Path $screenshotsDirectory $Name) 2>$null
+    winapp ui screenshot `
+        -w $script:mainHwnd `
+        -o (Join-Path $screenshotsDirectory $Name) `
+        2>$null
     if ($LASTEXITCODE -ne 0) {
         throw "Could not capture $Name."
     }
@@ -189,31 +296,55 @@ function Test-Accessibility {
     param([Parameter(Mandatory)][string]$State)
 
     try {
-        $inspection = winapp ui inspect -a $AppPid --interactive --json 2>$null |
+        $inspection = winapp ui inspect `
+            -w $script:mainHwnd `
+            --interactive `
+            --json `
+            2>$null |
             ConvertFrom-Json
         $interactive = @(
-            $inspection.elements |
+            $inspection.windows |
+                Where-Object { $_.hwnd -eq $script:mainHwnd } |
+                ForEach-Object { $_.elements } |
                 Where-Object {
-                    $_.type -match 'Button|Edit|PasswordBox|ProgressBar|RadioButton' -and
-                    $_.name -notmatch 'Minimize|Maximize|Close|System' -and
-                    $_.className -notmatch 'PickerHost|#32770|CabinetWClass'
+                    $type = $_.PSObject.Properties['type']?.Value
+                    $name = $_.PSObject.Properties['name']?.Value
+                    $className = $_.PSObject.Properties['className']?.Value
+                    $type -match 'Button|Edit|PasswordBox|ProgressBar|RadioButton' -and
+                    $name -notmatch 'Minimize|Maximize|Close|System' -and
+                    $className -notmatch 'PickerHost|#32770|CabinetWClass'
                 }
         )
-        $missing = @($interactive | Where-Object { -not $_.automationId })
+        $missing = @(
+            $interactive |
+                Where-Object {
+                    -not $_.PSObject.Properties['automationId'] -or
+                    [string]::IsNullOrWhiteSpace($_.automationId)
+                }
+        )
         if ($missing.Count -gt 0) {
             $names = $missing |
                 ForEach-Object { "$($_.type) '$($_.name)'" }
             throw "Missing AutomationId: $($names -join ', ')"
         }
 
-        $unnamed = @($interactive | Where-Object { -not $_.name })
+        $unnamed = @(
+            $interactive |
+                Where-Object {
+                    -not $_.PSObject.Properties['name'] -or
+                    [string]::IsNullOrWhiteSpace($_.name)
+                }
+        )
         if ($unnamed.Count -gt 0) {
             throw "Interactive elements have no accessible name: $($unnamed.type -join ', ')"
         }
 
         $duplicateIds = @(
             $interactive |
-                Where-Object { $_.automationId } |
+                Where-Object {
+                    $_.PSObject.Properties['automationId'] -and
+                    -not [string]::IsNullOrWhiteSpace($_.automationId)
+                } |
                 Group-Object -Property automationId |
                 Where-Object { $_.Count -gt 1 }
         )
@@ -264,18 +395,15 @@ if (-not $mainWindow) {
 $script:mainHwnd = $mainWindow.hwnd
 
 Test-UI 'Idle choose button exists' {
-    winapp ui wait-for 'ChoosePdfButton' -a $AppPid -t 3000
-}
-Test-UI 'Drop target exists' {
-    winapp ui wait-for 'DropTarget' -a $AppPid -t 3000
+    winapp ui wait-for 'ChoosePdfButton' -w $script:mainHwnd -t 3000
 }
 Test-UI 'Ctrl+O opens the picker' {
-    winapp ui send-keys 'ctrl+o' -a $AppPid --via send-input
+    winapp ui send-keys 'ctrl+o' -w $script:mainHwnd --via send-input
     $script:pickerHwnd = Wait-PickerWindow
 }
 Test-UI 'Picker can be cancelled without changing state' {
-    winapp ui invoke '2' -w $script:pickerHwnd
-    winapp ui wait-for 'ChoosePdfButton' -a $AppPid -t 3000
+    Invoke-PickerButton -AutomationId '2'
+    winapp ui wait-for 'ChoosePdfButton' -w $script:mainHwnd -t 3000
 }
 Save-Screenshot -Name '01-idle.png'
 Test-Accessibility -State 'Idle'
@@ -287,33 +415,54 @@ Test-UI 'Choose PDF opens the picker' {
         -ExpectedFileName 'input.pdf'
 }
 Test-UI 'Ready controls are wired' {
-    winapp ui wait-for 'OpeningModeRadioButtons' -a $AppPid -t 3000
-    winapp ui wait-for 'ChangeOutputButton' -a $AppPid -t 3000
-    winapp ui wait-for 'ConvertButton' -a $AppPid -t 3000
-    winapp ui wait-for 'ConvertButton' -a $AppPid -p HasKeyboardFocus --value 'True' -t 3000
+    winapp ui wait-for 'OpeningModeRadioButtons' -w $script:mainHwnd -t 3000
+    winapp ui wait-for 'ConvertButton' -w $script:mainHwnd -t 3000
+    winapp ui wait-for `
+        'ConvertButton' `
+        -w $script:mainHwnd `
+        -p HasKeyboardFocus `
+        --value 'True' `
+        -t 3000
 }
 Test-UI 'Cover mode can be selected' {
-    winapp ui invoke 'OpeningCover' -a $AppPid
-    winapp ui wait-for 'OpeningCover' -a $AppPid -p IsSelected --value 'True' -t 3000
+    winapp ui invoke 'OpeningCover' -w $script:mainHwnd
+    $selection = winapp ui get-property `
+        'OpeningCover' `
+        -w $script:mainHwnd `
+        -p IsSelected `
+        --json |
+        ConvertFrom-Json
+    if ($selection.properties.IsSelected -ne 'True') {
+        throw 'Cover mode was not selected.'
+    }
 }
 Test-UI 'Save picker can be cancelled safely' {
-    winapp ui invoke 'ChangeOutputButton' -a $AppPid
+    winapp ui invoke 'ConvertButton' -w $script:mainHwnd
     $script:pickerHwnd = Wait-PickerWindow
-    winapp ui invoke '2' -w $script:pickerHwnd
-    winapp ui wait-for 'ConvertButton' -a $AppPid -t 3000
-}
-Test-UI 'Explicit output path is committed by the save picker' {
-    Select-OutputThroughPicker `
-        -Path $outputPath `
-        -ExpectedFileName 'chosen-output.pdf'
+    $fileNameSelector = Get-PickerFileNameSelector
+    winapp ui wait-for `
+        $fileNameSelector `
+        -w $script:pickerHwnd `
+        --value 'input_spread.pdf' `
+        -t 3000
+    Invoke-PickerButton -AutomationId '2'
+    winapp ui wait-for 'ConvertButton' -w $script:mainHwnd -t 3000
 }
 Save-Screenshot -Name '02-ready-cover.png'
 Test-Accessibility -State 'Ready'
 
-Test-UI 'Conversion reaches Done' {
-    winapp ui invoke 'ConvertButton' -a $AppPid
-    winapp ui wait-for 'OpenOutputButton' -a $AppPid -t 15000
-    winapp ui wait-for 'OpenOutputButton' -a $AppPid -p HasKeyboardFocus --value 'True' -t 3000
+Test-UI 'Explicit picker destination converts and reaches Done' {
+    Select-ConversionOutput `
+        -ButtonId 'ConvertButton' `
+        -Path $outputPath `
+        -ExpectedSuggestion 'input_spread.pdf'
+    winapp ui wait-for 'OpenOutputButton' -w $script:mainHwnd -t 15000
+    winapp ui wait-for `
+        'OpenOutputButton' `
+        -w $script:mainHwnd `
+        -p HasKeyboardFocus `
+        --value 'True' `
+        -t 3000
 }
 Test-UI 'Output was committed at the explicitly selected path' {
     if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf)) {
@@ -321,31 +470,53 @@ Test-UI 'Output was committed at the explicitly selected path' {
     }
 }
 Test-UI 'Done actions are wired' {
-    winapp ui wait-for 'OpenOutputButton' -a $AppPid -p IsEnabled --value 'True' -t 3000
-    winapp ui wait-for 'ShowFolderButton' -a $AppPid -p IsEnabled --value 'True' -t 3000
-    winapp ui wait-for 'AnotherPdfButton' -a $AppPid -p IsEnabled --value 'True' -t 3000
+    winapp ui wait-for `
+        'OpenOutputButton' `
+        -w $script:mainHwnd `
+        -p IsEnabled `
+        --value 'True' `
+        -t 3000
+    winapp ui wait-for `
+        'ShowFolderButton' `
+        -w $script:mainHwnd `
+        -p IsEnabled `
+        --value 'True' `
+        -t 3000
+    winapp ui wait-for `
+        'AnotherPdfButton' `
+        -w $script:mainHwnd `
+        -p IsEnabled `
+        --value 'True' `
+        -t 3000
 }
 Save-Screenshot -Name '03-done.png'
 Test-Accessibility -State 'Done'
 
-Test-UI 'Convert another returns to Idle' {
-    winapp ui invoke 'AnotherPdfButton' -a $AppPid
-    winapp ui wait-for 'ChoosePdfButton' -a $AppPid -t 3000
+Test-UI 'Convert another opens the picker' {
+    winapp ui invoke 'AnotherPdfButton' -w $script:mainHwnd
+    $script:pickerHwnd = Wait-PickerWindow
 }
-Save-Screenshot -Name '04-returned-idle.png'
+Save-Screenshot -Name '04-another-picker.png'
 
-Test-UI 'Large PDF can be selected' {
-    Select-PdfThroughPicker `
-        -ButtonId 'ChoosePdfButton' `
+Test-UI 'Large PDF can be selected from the another-PDF flow' {
+    Complete-PdfSelection `
         -Path $cancelInputPath `
         -ExpectedFileName 'cancel.pdf'
 }
 Test-UI 'Active conversion can be cancelled without output' {
-    winapp ui invoke 'ConvertButton' -a $AppPid
-    winapp ui wait-for 'CancelButton' -a $AppPid -t 3000
-    winapp ui invoke 'CancelButton' -a $AppPid
-    winapp ui wait-for 'ConvertButton' -a $AppPid -t 15000
-    winapp ui wait-for 'ConvertButton' -a $AppPid -p HasKeyboardFocus --value 'True' -t 3000
+    Select-ConversionOutput `
+        -ButtonId 'ConvertButton' `
+        -Path $cancelOutputPath `
+        -ExpectedSuggestion 'cancel_spread.pdf'
+    winapp ui wait-for 'CancelButton' -w $script:mainHwnd -t 3000
+    winapp ui invoke 'CancelButton' -w $script:mainHwnd
+    winapp ui wait-for 'ConvertButton' -w $script:mainHwnd -t 15000
+    winapp ui wait-for `
+        'ConvertButton' `
+        -w $script:mainHwnd `
+        -p HasKeyboardFocus `
+        --value 'True' `
+        -t 3000
     if (Test-Path -LiteralPath $cancelOutputPath) {
         throw "Cancelled conversion committed an output: $cancelOutputPath"
     }
@@ -357,11 +528,24 @@ Test-UI 'Corrupt PDF reaches an actionable Error state' {
         -ButtonId 'PickAnotherButton' `
         -Path $corruptInputPath `
         -ExpectedFileName 'corrupt.pdf'
-    winapp ui invoke 'ConvertButton' -a $AppPid
-    winapp ui wait-for 'ErrorInfo' -a $AppPid -t 10000
-    winapp ui wait-for 'RetryButton' -a $AppPid --gone -t 3000
-    winapp ui wait-for 'ErrorChooseAnotherButton' -a $AppPid -p IsEnabled --value 'True' -t 3000
-    winapp ui wait-for 'ErrorChooseAnotherButton' -a $AppPid -p HasKeyboardFocus --value 'True' -t 3000
+    Select-ConversionOutput `
+        -ButtonId 'ConvertButton' `
+        -Path (Join-Path $resultsDirectory 'corrupt_spread.pdf') `
+        -ExpectedSuggestion 'corrupt_spread.pdf'
+    winapp ui wait-for 'ErrorInfo' -w $script:mainHwnd -t 10000
+    winapp ui wait-for 'RetryButton' -w $script:mainHwnd --gone -t 3000
+    winapp ui wait-for `
+        'ErrorChooseAnotherButton' `
+        -w $script:mainHwnd `
+        -p IsEnabled `
+        --value 'True' `
+        -t 3000
+    winapp ui wait-for `
+        'ErrorChooseAnotherButton' `
+        -w $script:mainHwnd `
+        -p HasKeyboardFocus `
+        --value 'True' `
+        -t 3000
 }
 Save-Screenshot -Name '06-corrupt-error.png'
 Test-Accessibility -State 'Error'
@@ -371,22 +555,38 @@ Test-UI 'Protected PDF reaches Password state' {
         -ButtonId 'ErrorChooseAnotherButton' `
         -Path $protectedInputPath `
         -ExpectedFileName 'protected.pdf'
-    winapp ui invoke 'ConvertButton' -a $AppPid
-    winapp ui wait-for 'PasswordInput' -a $AppPid -t 10000
-    winapp ui wait-for 'PasswordInput' -a $AppPid -p HasKeyboardFocus --value 'True' -t 3000
+    Select-ConversionOutput `
+        -ButtonId 'ConvertButton' `
+        -Path $protectedOutputPath `
+        -ExpectedSuggestion 'protected_spread.pdf'
+    winapp ui wait-for 'PasswordInput' -w $script:mainHwnd -t 10000
+    winapp ui wait-for `
+        'PasswordInput' `
+        -w $script:mainHwnd `
+        -p HasKeyboardFocus `
+        --value 'True' `
+        -t 3000
 }
 Test-UI 'Wrong password stays retryable' {
-    winapp ui send-keys 'wrong' --target 'PasswordInput' -a $AppPid --via send-input
-    winapp ui invoke 'RetryPasswordButton' -a $AppPid
-    winapp ui wait-for 'PasswordInput' -a $AppPid -t 10000
+    winapp ui send-keys `
+        'wrong' `
+        --target 'PasswordInput' `
+        -w $script:mainHwnd `
+        --via send-input
+    winapp ui invoke 'RetryPasswordButton' -w $script:mainHwnd
+    winapp ui wait-for 'PasswordInput' -w $script:mainHwnd -t 10000
 }
 Save-Screenshot -Name '07-wrong-password.png'
 Test-Accessibility -State 'Password'
 
 Test-UI 'Correct password completes and preserves an output' {
-    winapp ui send-keys 'secret' --target 'PasswordInput' -a $AppPid --via send-input
-    winapp ui invoke 'RetryPasswordButton' -a $AppPid
-    winapp ui wait-for 'OpenOutputButton' -a $AppPid -t 15000
+    winapp ui send-keys `
+        'secret' `
+        --target 'PasswordInput' `
+        -w $script:mainHwnd `
+        --via send-input
+    winapp ui invoke 'RetryPasswordButton' -w $script:mainHwnd
+    winapp ui wait-for 'OpenOutputButton' -w $script:mainHwnd -t 15000
     if (-not (Test-Path -LiteralPath $protectedOutputPath -PathType Leaf)) {
         throw "Protected output was not created: $protectedOutputPath"
     }

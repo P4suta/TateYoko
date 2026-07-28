@@ -1,9 +1,9 @@
-# Normalize line endings: LF in the repository, native on checkout (CRLF on
-# Windows, matching .editorconfig). Explicit binaries are never normalized.
+# Normalize text to LF unless a generating tool requires another checkout form.
 * text=auto eol=lf
 
-# The justfile recipes run under bash; keep it LF even on Windows checkouts so
-# stray CRLFs never reach the shell.
+# NuGet rewrites lock files with CRLF on Windows.
+packages*.lock.json text eol=crlf
+
 justfile text eol=lf
 
 *.png binary

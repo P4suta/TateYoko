@@ -35,7 +35,7 @@ jobs:
       - name: Format, compile, contract-test, coverage, audit, notices, and mutation
         run: mise exec -- just ci
 
-      - name: Prove x64/ARM64 portable and MSIX packaging
+      - name: Prove x64/ARM64 MSIX packaging
         run: mise exec -- just dist-build 0.0.1
 
       - name: Upload diagnostic quality reports
@@ -94,6 +94,7 @@ jobs:
           languages: csharp
           build-mode: manual
           queries: security-and-quality
+          config-file: ./.github/codeql-config.yml
 
       - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
         with:
@@ -104,9 +105,21 @@ jobs:
           mise exec -- just restore-locked
           mise exec -- just build
 
-      - name: Analyze
+      - name: Analyze without publishing unfiltered generated findings
         uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
+          category: /language:csharp
+          upload: never
+          post-processed-sarif-path: build/codeql-sarif
+
+      - name: Remove generated findings and reject every source warning or error
+        run: ./.config/Test-CodeQlSarif.ps1 -Path build/codeql-sarif
+
+      - name: Upload the filtered source analysis
+        if: ${{ always() }}
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          sarif_file: build/codeql-sarif
           category: /language:csharp
 
   # Keep this job id stable: the default-branch ruleset requires the `test` context.

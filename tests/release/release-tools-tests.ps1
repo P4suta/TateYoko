@@ -113,17 +113,17 @@ function Write-ValidCoverageSet {
     Write-CoverageReport `
         -Path ([IO.Path]::Combine($Root, 'engine', 'engine.cobertura.xml')) `
         -Package 'TateYoko.Engine' `
-        -LinesCovered 90 `
-        -LineRate '0.9' `
-        -BranchesCovered 85 `
-        -BranchRate '0.85'
+        -LinesCovered 95 `
+        -LineRate '0.95' `
+        -BranchesCovered 90 `
+        -BranchRate '0.9'
     Write-CoverageReport `
         -Path ([IO.Path]::Combine($Root, 'app', 'app.cobertura.xml')) `
         -Package 'TateYoko' `
-        -LinesCovered 85 `
-        -LineRate '0.85' `
-        -BranchesCovered 80 `
-        -BranchRate '0.8'
+        -LinesCovered 95 `
+        -LineRate '0.95' `
+        -BranchesCovered 90 `
+        -BranchRate '0.9'
 }
 
 function Write-NoticeFixture {
@@ -239,11 +239,7 @@ try {
     Assert-Condition `
         -Condition ($signable.ExitCode -eq 0) `
         -Message "Pack list-signable failed: $($signable.Text)"
-    $expectedSignable = @(
-        'TateYoko-win-x64.exe',
-        'TateYoko-win-arm64.exe',
-        'TateYoko.msixbundle'
-    ) -join [Environment]::NewLine
+    $expectedSignable = 'TateYoko.msixbundle'
     Assert-Condition `
         -Condition ($signable.Text -eq $expectedSignable) `
         -Message "Pack signing surface changed: $($signable.Text)"
@@ -279,10 +275,10 @@ try {
         -Condition (
             $validCoverage.ExitCode -eq 0 -and
             $validCoverage.Text.Contains(
-                'engine: lines 90',
+                'engine: lines 95',
                 [StringComparison]::Ordinal) -and
             $validCoverage.Text.Contains(
-                'app: lines 85',
+                'app: lines 95',
                 [StringComparison]::Ordinal)) `
         -Message "Quality rejected exact budgets: $($validCoverage.Text)"
 
@@ -292,10 +288,10 @@ try {
             'engine',
             'engine.cobertura.xml')) `
         -Package 'TateYoko.Engine' `
-        -LinesCovered 89 `
-        -LineRate '0.89' `
-        -BranchesCovered 85 `
-        -BranchRate '0.85'
+        -LinesCovered 94 `
+        -LineRate '0.94' `
+        -BranchesCovered 90 `
+        -BranchRate '0.9'
     $belowBudget = Invoke-ReleaseTool `
         -AssemblyPath $qualityAssembly `
         -Arguments @('coverage', $validCoverageRoot)
@@ -313,10 +309,10 @@ try {
             'engine',
             'engine.cobertura.xml')) `
         -Package 'TateYoko.Engine' `
-        -LinesCovered 90 `
-        -LineRate '0.91' `
-        -BranchesCovered 85 `
-        -BranchRate '0.85'
+        -LinesCovered 95 `
+        -LineRate '0.96' `
+        -BranchesCovered 90 `
+        -BranchRate '0.9'
     $inconsistentCoverage = Invoke-ReleaseTool `
         -AssemblyPath $qualityAssembly `
         -Arguments @('coverage', $validCoverageRoot)

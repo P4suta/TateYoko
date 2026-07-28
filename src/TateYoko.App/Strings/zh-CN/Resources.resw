@@ -21,47 +21,35 @@
   <data name="IdleHeading.Text" xml:space="preserve">
     <value>将PDF转换为易读的跨页</value>
   </data>
-  <data name="IdleDescription.Text" xml:space="preserve">
-    <value>只需选择一个PDF。所有处理都在此设备上完成。</value>
-  </data>
   <data name="ChoosePdfButton.Content" xml:space="preserve">
     <value>选择PDF</value>
   </data>
   <data name="DropHint.Text" xml:space="preserve">
     <value>或在此拖入一个PDF · Ctrl+O</value>
   </data>
-  <data name="ReadyHeading.Text" xml:space="preserve">
-    <value>已准备好生成跨页</value>
-  </data>
   <data name="OpeningModeLabel.Text" xml:space="preserve">
     <value>书籍如何开始？</value>
   </data>
+  <data name="OpeningModeOptions.AutomationProperties.Name" xml:space="preserve">
+    <value>书籍如何开始？</value>
+  </data>
   <data name="OpeningStandardTitle.Text" xml:space="preserve">
+    <value>第1–2页</value>
+  </data>
+  <data name="OpeningStandardOption.AutomationProperties.Name" xml:space="preserve">
     <value>从第1页开始配对</value>
   </data>
-  <data name="OpeningStandardDescription.Text" xml:space="preserve">
-    <value>将第1–2页并排，然后继续两页一组。</value>
-  </data>
   <data name="OpeningCoverTitle.Text" xml:space="preserve">
+    <value>封面单独</value>
+  </data>
+  <data name="OpeningCoverOption.AutomationProperties.Name" xml:space="preserve">
     <value>将第1页保留为封面</value>
   </data>
-  <data name="OpeningCoverDescription.Text" xml:space="preserve">
-    <value>第1页单独保留，从第2–3页开始配对。</value>
-  </data>
   <data name="OpeningLeadingBlankTitle.Text" xml:space="preserve">
+    <value>空白＋第1页</value>
+  </data>
+  <data name="OpeningLeadingBlankOption.AutomationProperties.Name" xml:space="preserve">
     <value>在第1页前添加空白</value>
-  </data>
-  <data name="OpeningLeadingBlankDescription.Text" xml:space="preserve">
-    <value>将第1页置于左侧，然后继续两页一组。</value>
-  </data>
-  <data name="OutputLabel.Text" xml:space="preserve">
-    <value>输出</value>
-  </data>
-  <data name="ChangeOutputButton.Content" xml:space="preserve">
-    <value>更改…</value>
-  </data>
-  <data name="CollisionNote.Text" xml:space="preserve">
-    <value>自动命名不会覆盖现有文件；手动选择的位置将遵循覆盖确认。</value>
   </data>
   <data name="ConvertButton.Content" xml:space="preserve">
     <value>生成跨页</value>
@@ -75,7 +63,7 @@
   <data name="CancelButton.Content" xml:space="preserve">
     <value>取消</value>
   </data>
-  <data name="PasswordInfo.Title" xml:space="preserve">
+  <data name="PasswordHeading.Text" xml:space="preserve">
     <value>此PDF需要密码</value>
   </data>
   <data name="PasswordInput.Header" xml:space="preserve">
@@ -87,11 +75,8 @@
   <data name="RetryPasswordButton.Content" xml:space="preserve">
     <value>解锁并生成</value>
   </data>
-  <data name="DoneInfo.Title" xml:space="preserve">
+  <data name="DoneHeading.Text" xml:space="preserve">
     <value>已生成跨页</value>
-  </data>
-  <data name="DoneInfo.Message" xml:space="preserve">
-    <value>新的PDF已就绪。</value>
   </data>
   <data name="OutputActionErrorInfo.Title" xml:space="preserve">
     <value>Windows无法打开输出文件</value>
@@ -108,7 +93,7 @@
   <data name="AnotherPdfButton.Content" xml:space="preserve">
     <value>转换其他PDF</value>
   </data>
-  <data name="ErrorInfo.Title" xml:space="preserve">
+  <data name="ErrorHeading.Text" xml:space="preserve">
     <value>无法生成跨页</value>
   </data>
   <data name="RetryButton.Content" xml:space="preserve">
@@ -163,7 +148,22 @@
     <value>请只选择一个PDF文件。</value>
   </data>
   <data name="ErrorUnsupportedPdfFeature" xml:space="preserve">
-    <value>此PDF使用了无法在跨页转换中安全保留的功能。支持链接和书签。请选择不含表单、备注、附件、脚本、标签、图层或自定义元数据的副本。</value>
+    <value>此PDF包含TateYoko静态页面范围之外的功能。</value>
+  </data>
+  <data name="ErrorUnsupportedAnnotation" xml:space="preserve">
+    <value>此PDF包含批注。请先将批注展平到页面或删除批注。</value>
+  </data>
+  <data name="ErrorUnsupportedForm" xml:space="preserve">
+    <value>此PDF包含表单、签名或受保护的文档行为，无法安全转换。</value>
+  </data>
+  <data name="ErrorUnsupportedAction" xml:space="preserve">
+    <value>此PDF包含操作、脚本、页面切换或多媒体行为。请先将其删除。</value>
+  </data>
+  <data name="ErrorUnsupportedAttachment" xml:space="preserve">
+    <value>此PDF包含附件或集合。请先将其删除。</value>
+  </data>
+  <data name="ErrorUnsupportedLayer" xml:space="preserve">
+    <value>此PDF包含无法安全固定的图层或视口内容。</value>
   </data>
   <data name="ErrorPasswordRequired" xml:space="preserve">
     <value>请输入用于打开此PDF的密码。</value>

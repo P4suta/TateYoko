@@ -4,7 +4,8 @@ namespace TateYoko.App.Services;
 
 internal sealed class ResourceUiStrings : IUiStrings
 {
-    public string ForError(PdfSpreadError error) => ErrorMessages.For(error);
+    public string ForError(PdfSpreadError error, string? technicalDetail = null) =>
+        ErrorMessages.For(error, technicalDetail);
 
     public string ProgressStarting => Localized.Get("ProgressStarting");
 

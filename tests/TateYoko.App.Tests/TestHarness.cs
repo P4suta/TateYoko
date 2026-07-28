@@ -59,12 +59,12 @@ internal sealed class FakeConverter : IPdfSpreadConverter
         PdfSpreadRequest,
         IProgress<PdfSpreadProgress>?,
         CancellationToken,
-        PdfSpreadResult
+        Task<PdfSpreadResult>
     >? Behavior { get; set; }
 
     internal List<PdfSpreadRequest> Requests { get; } = [];
 
-    public PdfSpreadResult Convert(
+    public async Task<PdfSpreadResult> ConvertAsync(
         PdfSpreadRequest request,
         IProgress<PdfSpreadProgress>? progress = null,
         CancellationToken cancellationToken = default
@@ -73,12 +73,16 @@ internal sealed class FakeConverter : IPdfSpreadConverter
         Requests.Add(request);
         if (Behavior is not null)
         {
-            return Behavior(request, progress, cancellationToken);
+            return await Behavior(request, progress, cancellationToken);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         progress?.Report(new PdfSpreadProgress(1, 1));
-        File.WriteAllBytes(request.OutputPath, "%PDF-1.7"u8.ToArray());
+        await File.WriteAllBytesAsync(
+            request.OutputPath,
+            "%PDF-1.7"u8.ToArray(),
+            cancellationToken
+        );
         return new PdfSpreadResult(request.OutputPath, 2, 1);
     }
 }
@@ -93,7 +97,8 @@ internal sealed class FakeStrings : IUiStrings
 
     public string OutputActionFailed => "output-action-failed";
 
-    public string ForError(PdfSpreadError error) => $"error:{error}";
+    public string ForError(PdfSpreadError error, string? technicalDetail = null) =>
+        technicalDetail is null ? $"error:{error}" : $"error:{error}:{technicalDetail}";
 
     public string Progress(int completed, int total) => $"{completed}/{total}";
 }

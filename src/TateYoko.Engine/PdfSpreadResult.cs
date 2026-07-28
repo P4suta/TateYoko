@@ -1,13 +1,8 @@
 namespace TateYoko.Engine;
 
-/// <summary>Describes a successfully committed conversion.</summary>
-public sealed class PdfSpreadResult
+internal sealed class PdfSpreadResult
 {
-    /// <summary>Initializes a successful conversion result.</summary>
-    /// <param name="outputPath">Full path that was atomically committed.</param>
-    /// <param name="inputPageCount">Positive number of input pages.</param>
-    /// <param name="spreadCount">Positive number of output spread pages.</param>
-    public PdfSpreadResult(string outputPath, int inputPageCount, int spreadCount)
+    internal PdfSpreadResult(string outputPath, int inputPageCount, int spreadCount)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
         if (!Path.IsPathFullyQualified(outputPath))
@@ -26,12 +21,9 @@ public sealed class PdfSpreadResult
         SpreadCount = spreadCount;
     }
 
-    /// <summary>Gets the full path of the committed output file.</summary>
-    public string OutputPath { get; }
+    internal string OutputPath { get; }
 
-    /// <summary>Gets the number of pages in the input PDF.</summary>
-    public int InputPageCount { get; }
+    internal int InputPageCount { get; }
 
-    /// <summary>Gets the number of pages in the output PDF.</summary>
-    public int SpreadCount { get; }
+    internal int SpreadCount { get; }
 }

@@ -18,9 +18,8 @@
         <RestoreLockedMode>true</RestoreLockedMode>
     </PropertyGroup>
 
-    <!-- DistributionMode is a global publish property, so this also suppresses symbols from
-         project references instead of leaking PDBs into portable or MSIX payloads. -->
-    <PropertyGroup Condition="'$(DistributionMode)' == 'Portable' Or '$(DistributionMode)' == 'Msix'">
+    <!-- The global property also suppresses symbols from project references in the MSIX. -->
+    <PropertyGroup Condition="'$(DistributionMode)' == 'Msix'">
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
     </PropertyGroup>

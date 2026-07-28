@@ -14,7 +14,6 @@ using Windows.Storage;
 
 namespace TateYoko.App;
 
-/// <summary>The single PDF conversion surface and its Windows platform integrations.</summary>
 public sealed partial class MainPage : Page
 {
     private readonly WindowId _windowId;
@@ -141,9 +140,20 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private async void OnChangeOutputClicked(object sender, RoutedEventArgs e)
+    private async void OnConvertClicked(object sender, RoutedEventArgs e) =>
+        await PickOutputAndConvertAsync().ConfigureAwait(true);
+
+    private async void OnRetryClicked(object sender, RoutedEventArgs e)
     {
-        if (_detached)
+        if (ViewModel.PrepareRetry())
+        {
+            await PickOutputAndConvertAsync().ConfigureAwait(true);
+        }
+    }
+
+    private async Task PickOutputAndConvertAsync()
+    {
+        if (_detached || !ViewModel.IsReady)
         {
             return;
         }
@@ -154,7 +164,7 @@ public sealed partial class MainPage : Page
             {
                 Title = Localized.Get("SavePickerTitle"),
                 CommitButtonText = Localized.Get("SavePickerCommit"),
-                SuggestedFileName = ViewModel.OutputFileName,
+                SuggestedFileName = ViewModel.SuggestedOutputFileName,
                 DefaultFileExtension = ".pdf",
                 ShowOverwritePrompt = true,
             };
@@ -162,7 +172,7 @@ public sealed partial class MainPage : Page
             PickFileResult? result = await picker.PickSaveFileAsync().AsTask().ConfigureAwait(true);
             if (!_detached && result is not null)
             {
-                ViewModel.SetExplicitOutput(result.Path);
+                await ViewModel.ConvertToAsync(result.Path).ConfigureAwait(true);
             }
         }
         catch (Exception exception)
@@ -239,7 +249,7 @@ public sealed partial class MainPage : Page
                     OpenOutputButton?.Focus(state);
                     break;
                 case ConversionState.Error:
-                    if (ViewModel.RetryCommand.CanExecute(null))
+                    if (ViewModel.CanRetryCurrentError)
                     {
                         RetryButton?.Focus(state);
                     }

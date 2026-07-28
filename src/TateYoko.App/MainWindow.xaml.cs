@@ -8,20 +8,17 @@ using Windows.Graphics;
 
 namespace TateYoko.App;
 
-/// <summary>The compact, single-purpose application window.</summary>
 public sealed partial class MainWindow : Window
 {
-    private const int InitialWidthDip = 640;
-    private const int InitialHeightDip = 560;
-    private const int MinimumWidthDip = 520;
-    private const int MinimumHeightDip = 480;
+    private const int InitialWidthDip = 560;
+    private const int InitialHeightDip = 500;
+    private const int MinimumWidthDip = 460;
+    private const int MinimumHeightDip = 420;
     private readonly MainPage _mainPage;
-    private readonly MainViewModel _viewModel;
 
     internal MainWindow(MainViewModel viewModel)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
-        _viewModel = viewModel;
         InitializeComponent();
 
         Title = Localized.Get("AppTitle");
@@ -75,7 +72,6 @@ public sealed partial class MainWindow : Window
         Closed -= OnClosed;
         _mainPage.Detach();
         RootContent.Content = null;
-        _viewModel.Dispose();
     }
 
     private SizeInt32 ToPixels(int widthDip, int heightDip)

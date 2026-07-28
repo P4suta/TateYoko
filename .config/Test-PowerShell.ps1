@@ -17,22 +17,22 @@ if ($null -eq $module) {
 
 Import-Module -Name $module.Path -Force -ErrorAction Stop
 $scriptPaths = @(
-    [IO.Path]::Combine($repositoryRoot, 'BuildAndRun.ps1'),
-    [IO.Path]::Combine(
-        $repositoryRoot,
-        '.config',
-        'Install-Poppler.ps1'),
-    [IO.Path]::Combine(
-        $repositoryRoot,
-        'tests',
-        'release',
-        'release-tools-tests.ps1'),
-    [IO.Path]::Combine(
-        $repositoryRoot,
-        'tests',
-        'ui',
-        'ui-tests.ps1'),
-    $PSCommandPath
+    Get-Item -LiteralPath (
+        [IO.Path]::Combine($repositoryRoot, 'BuildAndRun.ps1'))
+    Get-ChildItem `
+        -LiteralPath ([IO.Path]::Combine($repositoryRoot, '.config')) `
+        -Filter '*.ps1' `
+        -File
+    Get-ChildItem `
+        -LiteralPath ([IO.Path]::Combine($repositoryRoot, 'tests')) `
+        -Filter '*.ps1' `
+        -File `
+        -Recurse
+) |
+    Select-Object -ExpandProperty FullName -Unique |
+    Sort-Object
+$scriptPaths = @(
+    $scriptPaths
 )
 $diagnostics = @(
     foreach ($scriptPath in $scriptPaths) {

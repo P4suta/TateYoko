@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
-using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -137,12 +136,7 @@ internal static partial class PackApplication
 
         private string AppxVersion => $"{_options.Version}.0";
 
-        private static readonly string[] SignableNames =
-        [
-            "TateYoko-win-x64.exe",
-            "TateYoko-win-arm64.exe",
-            "TateYoko.msixbundle",
-        ];
+        private static readonly string[] SignableNames = ["TateYoko.msixbundle"];
 
         internal void Execute(string command)
         {
@@ -187,99 +181,11 @@ internal static partial class PackApplication
             SafeDeleteDirectory(_packageDirectory);
             Directory.CreateDirectory(_unsignedDirectory);
 
-            foreach (string architecture in Architectures)
-            {
-                BuildPortable(architecture);
-            }
-            foreach (string architecture in Architectures)
-            {
-                CreatePortableArchive(
-                    architecture,
-                    Path.Combine(_unsignedDirectory, $"TateYoko-win-{architecture}.exe"),
-                    Path.Combine(_unsignedDirectory, $"TateYoko-win-{architecture}.zip")
-                );
-            }
-
             var msixPackages = Architectures.Select(BuildMsix).ToArray();
             BuildBundle(msixPackages);
             WriteAppInstaller();
             ValidateAppInstaller();
             Step($"Unsigned artifacts ready: {_unsignedDirectory}");
-        }
-
-        private void BuildPortable(string architecture)
-        {
-            string runtimeIdentifier = $"win-{architecture}";
-            string platform = architecture == "arm64" ? "ARM64" : "x64";
-            string output = Path.Combine(_unsignedDirectory, "portable", runtimeIdentifier);
-            Directory.CreateDirectory(output);
-            RestoreAppForDistribution("Portable", runtimeIdentifier, platform);
-            Step($"Publishing portable {architecture}");
-            RunProcess(
-                "dotnet",
-                [
-                    "publish",
-                    _appProject,
-                    "-c",
-                    _options.Configuration,
-                    "-r",
-                    runtimeIdentifier,
-                    "--no-restore",
-                    "-o",
-                    output,
-                    $"-p:Platform={platform}",
-                    "-p:DistributionMode=Portable",
-                    "-p:PublishReadyToRun=true",
-                    $"-p:Version={_options.Version}",
-                    $"-p:FileVersion={AppxVersion}",
-                    $"-p:InformationalVersion={_options.Version}",
-                    "-p:IncludeSourceRevisionInInformationalVersion=false",
-                    "-p:ContinuousIntegrationBuild=true",
-                ]
-            );
-
-            string[] files = Directory.GetFiles(output, "*", SearchOption.AllDirectories);
-            string executable = Path.Combine(output, "TateYoko.exe");
-            string resourceIndex = Path.Combine(output, "TateYoko.pri");
-            string[] expectedFiles = [executable, resourceIndex];
-            if (
-                files.Length != expectedFiles.Length
-                || expectedFiles.Any(path => !File.Exists(path))
-                || files.Except(expectedFiles, StringComparer.OrdinalIgnoreCase).Any()
-            )
-            {
-                string names = string.Join(
-                    ", ",
-                    files.Select(path => Path.GetRelativePath(output, path))
-                );
-                throw new InvalidOperationException(
-                    $"Portable {architecture} must contain only TateYoko.exe and TateYoko.pri. "
-                        + $"Found: {names}"
-                );
-            }
-
-            var info = new FileInfo(executable);
-            if (info.Length > 300L * 1024 * 1024)
-            {
-                throw new InvalidOperationException(
-                    $"Portable {architecture} exceeds the 300 MiB release budget."
-                );
-            }
-            var resourceInfo = new FileInfo(resourceIndex);
-            if (resourceInfo.Length is <= 0 or > 16L * 1024 * 1024)
-            {
-                throw new InvalidOperationException(
-                    $"Portable {architecture} resource index is empty or exceeds 16 MiB."
-                );
-            }
-
-            ValidatePortableArchitecture(executable, architecture);
-            ValidatePortableMetadata(executable);
-            File.Copy(
-                executable,
-                Path.Combine(_unsignedDirectory, $"TateYoko-win-{architecture}.exe"),
-                overwrite: true
-            );
         }
 
         private string BuildMsix(string architecture)
@@ -289,7 +195,7 @@ internal static partial class PackApplication
             string output = Path.Combine(_unsignedDirectory, "msix", architecture);
             Directory.CreateDirectory(output);
             string releaseManifest = WriteReleaseAppxManifest(output);
-            RestoreAppForDistribution("Msix", runtimeIdentifier, platform);
+            RestoreAppForDistribution(runtimeIdentifier, platform);
             Step($"Building unsigned MSIX {architecture}");
             RunProcess(
                 "dotnet",
@@ -335,13 +241,9 @@ internal static partial class PackApplication
             return packages[0];
         }
 
-        private void RestoreAppForDistribution(
-            string distributionMode,
-            string runtimeIdentifier,
-            string platform
-        )
+        private void RestoreAppForDistribution(string runtimeIdentifier, string platform)
         {
-            Step($"Restoring {distributionMode} dependencies for {runtimeIdentifier}");
+            Step($"Restoring MSIX dependencies for {runtimeIdentifier}");
             RunProcess(
                 "dotnet",
                 [
@@ -350,7 +252,7 @@ internal static partial class PackApplication
                     "--locked-mode",
                     $"-p:Configuration={_options.Configuration}",
                     $"-p:Platform={platform}",
-                    $"-p:DistributionMode={distributionMode}",
+                    "-p:DistributionMode=Msix",
                     "-p:PublishReadyToRun=true",
                 ]
             );
@@ -497,20 +399,6 @@ internal static partial class PackApplication
                 VerifySignerAndTimestamp(path);
             }
 
-            ValidatePortableArchitecture(
-                Path.Combine(_signedArtifactsDirectory, "TateYoko-win-x64.exe"),
-                "x64"
-            );
-            ValidatePortableArchitecture(
-                Path.Combine(_signedArtifactsDirectory, "TateYoko-win-arm64.exe"),
-                "arm64"
-            );
-            ValidatePortableMetadata(
-                Path.Combine(_signedArtifactsDirectory, "TateYoko-win-x64.exe")
-            );
-            ValidatePortableMetadata(
-                Path.Combine(_signedArtifactsDirectory, "TateYoko-win-arm64.exe")
-            );
             ValidateBundle(Path.Combine(_signedArtifactsDirectory, "TateYoko.msixbundle"));
             ValidateAppInstaller(Path.Combine(_signedArtifactsDirectory, "TateYoko.appinstaller"));
             Step("All release signatures, timestamps, identities, and architectures are valid");
@@ -520,6 +408,12 @@ internal static partial class PackApplication
         {
             VerifySignedArtifacts();
             string sbom = Path.Combine(_repositoryRoot, "build", "sbom", "tateyoko.cdx.json");
+            string sourceSbom = Path.Combine(
+                _repositoryRoot,
+                "build",
+                "sbom",
+                "tateyoko-sources.spdx"
+            );
             string notices = Path.Combine(
                 _repositoryRoot,
                 "build",
@@ -527,7 +421,7 @@ internal static partial class PackApplication
                 "THIRD-PARTY-NOTICES.txt"
             );
             string license = Path.Combine(_repositoryRoot, "LICENSE");
-            foreach (string required in new[] { sbom, notices, license })
+            foreach (string required in new[] { sbom, sourceSbom, notices, license })
             {
                 if (!File.Exists(required))
                 {
@@ -538,6 +432,7 @@ internal static partial class PackApplication
             }
 
             ValidateSbom(sbom);
+            ValidateSourceSbom(sourceSbom);
             ValidateNotice(notices);
             SafeDeleteDirectory(_packageDirectory);
             Directory.CreateDirectory(_packageDirectory);
@@ -549,87 +444,12 @@ internal static partial class PackApplication
                 Path.Combine(_signedArtifactsDirectory, "TateYoko.appinstaller"),
                 Path.Combine(_packageDirectory, "TateYoko.appinstaller")
             );
-            foreach (string architecture in Architectures)
-            {
-                CreatePortableArchive(
-                    architecture,
-                    Path.Combine(_signedArtifactsDirectory, $"TateYoko-win-{architecture}.exe"),
-                    Path.Combine(_packageDirectory, $"TateYoko-win-{architecture}.zip")
-                );
-            }
-
             File.Copy(sbom, Path.Combine(_packageDirectory, "tateyoko.cdx.json"));
+            File.Copy(sourceSbom, Path.Combine(_packageDirectory, "tateyoko-sources.spdx"));
             File.Copy(notices, Path.Combine(_packageDirectory, Path.GetFileName(notices)));
             File.Copy(license, Path.Combine(_packageDirectory, "LICENSE.txt"));
             WriteChecksums();
             Step($"Signed release package ready: {_packageDirectory}");
-        }
-
-        private void CreatePortableArchive(
-            string architecture,
-            string executable,
-            string archivePath
-        )
-        {
-            string resourceIndex = Path.Combine(
-                _unsignedDirectory,
-                "portable",
-                $"win-{architecture}",
-                "TateYoko.pri"
-            );
-            foreach (string required in new[] { executable, resourceIndex })
-            {
-                if (!File.Exists(required))
-                {
-                    throw new InvalidOperationException(
-                        $"Portable release input is missing: {required}"
-                    );
-                }
-            }
-
-            using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
-            {
-                archive.CreateEntryFromFile(executable, "TateYoko.exe", CompressionLevel.Optimal);
-                archive.CreateEntryFromFile(
-                    resourceIndex,
-                    "TateYoko.pri",
-                    CompressionLevel.Optimal
-                );
-            }
-
-            ValidatePortableArchive(archivePath);
-        }
-
-        private static void ValidatePortableArchive(string path)
-        {
-            var info = new FileInfo(path);
-            if (!info.Exists || info.Length is <= 0 or > 320L * 1024 * 1024)
-            {
-                throw new InvalidOperationException(
-                    $"Portable ZIP has an invalid size or exceeds 320 MiB: {path}"
-                );
-            }
-
-            using ZipArchive archive = ZipFile.OpenRead(path);
-            ValidateArchiveEntries(archive);
-            string[] names = [.. archive.Entries.Select(entry => entry.FullName).Order()];
-            string[] expected = ["TateYoko.exe", "TateYoko.pri"];
-            if (!names.SequenceEqual(expected, StringComparer.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Portable ZIP payload is invalid: {string.Join(", ", names)}"
-                );
-            }
-
-            foreach (ZipArchiveEntry entry in archive.Entries)
-            {
-                if (entry.Length <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Portable ZIP contains an empty file: {entry.FullName}"
-                    );
-                }
-            }
         }
 
         private void WriteChecksums()
@@ -656,10 +476,10 @@ internal static partial class PackApplication
         private void ValidateMsix(string path, string architecture)
         {
             var info = new FileInfo(path);
-            if (!info.Exists || info.Length is <= 0 or > 350L * 1024 * 1024)
+            if (!info.Exists || info.Length is <= 0 or > 80L * 1024 * 1024)
             {
                 throw new InvalidOperationException(
-                    $"MSIX has an invalid size or exceeds the 350 MiB release budget: {path}"
+                    $"MSIX has an invalid size or exceeds the 80 MiB release budget: {path}"
                 );
             }
 
@@ -675,6 +495,8 @@ internal static partial class PackApplication
                 "PdfSharp.System.dll",
                 "resources.pri",
                 "Assets/AppIcon.ico",
+                "LICENSE.txt",
+                "THIRD-PARTY-NOTICES.txt",
             ];
             string[] missingEntries =
             [
@@ -718,6 +540,17 @@ internal static partial class PackApplication
                             StringComparison.OrdinalIgnoreCase
                         )
                         || name.EndsWith("PdfSharp.WPFonts.dll", StringComparison.OrdinalIgnoreCase)
+                        || name.EndsWith(
+                            "Microsoft.DiaSymReader.Native.amd64.dll",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                        || name.EndsWith(
+                            "Microsoft.DiaSymReader.Native.arm64.dll",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                        || name.EndsWith("mscordaccore.dll", StringComparison.OrdinalIgnoreCase)
+                        || name.Contains("mscordaccore_", StringComparison.OrdinalIgnoreCase)
+                        || name.EndsWith("mscordbi.dll", StringComparison.OrdinalIgnoreCase)
                     ),
             ];
             if (forbiddenFiles.Length > 0)
@@ -785,13 +618,25 @@ internal static partial class PackApplication
                 );
             }
 
-            bool hasExtension = manifest
-                .Descendants()
-                .Any(element => element.Name.LocalName == "Extension");
-            if (hasExtension)
+            XElement[] exposedExtensions =
+            [
+                .. manifest
+                    .Descendants()
+                    .Where(element =>
+                        element.Name.LocalName == "Extension"
+                        && !IsFrameworkInternalExtension(element)
+                    ),
+            ];
+            if (exposedExtensions.Length > 0)
             {
+                string categories = string.Join(
+                    ", ",
+                    exposedExtensions.Select(extension =>
+                        (string?)extension.Attribute("Category") ?? "<missing>"
+                    )
+                );
                 throw new InvalidOperationException(
-                    "MSIX must not expose file associations, protocols, aliases, or extensions."
+                    $"MSIX contains forbidden public extensions: {categories}."
                 );
             }
 
@@ -799,18 +644,33 @@ internal static partial class PackApplication
                 .Descendants()
                 .Single(element => element.Name.LocalName == "Dependencies");
             XElement[] dependencyEntries = [.. dependencies.Elements()];
+            XElement[] targetFamilies =
+            [
+                .. dependencyEntries.Where(entry => entry.Name.LocalName == "TargetDeviceFamily"),
+            ];
+            XElement[] packageDependencies =
+            [
+                .. dependencyEntries.Where(entry => entry.Name.LocalName == "PackageDependency"),
+            ];
             if (
-                dependencyEntries.Length != 1
-                || dependencyEntries[0].Name.LocalName != "TargetDeviceFamily"
+                targetFamilies.Length != 1
+                || packageDependencies.Length == 0
+                || dependencyEntries.Length != targetFamilies.Length + packageDependencies.Length
+                || packageDependencies.Any(dependency =>
+                    !((string?)dependency.Attribute("Name") ?? string.Empty).StartsWith(
+                        "Microsoft.WindowsAppRuntime.",
+                        StringComparison.Ordinal
+                    )
+                )
             )
             {
                 throw new InvalidOperationException(
-                    "MSIX must be fully self-contained and may depend only on Windows 11. "
+                    "MSIX must depend only on Windows 11 and the serviced Windows App Runtime. "
                         + $"Found: {string.Join(", ", dependencyEntries.Select(entry => entry.Name.LocalName))}"
                 );
             }
 
-            XElement targetFamily = dependencyEntries[0];
+            XElement targetFamily = targetFamilies[0];
             AssertAttribute(targetFamily, "MinVersion", "10.0.22000.0");
             AssertAttribute(targetFamily, "MaxVersionTested", "10.0.26100.0");
             if (!Path.GetFileName(path).Contains(architecture, StringComparison.OrdinalIgnoreCase))
@@ -824,10 +684,10 @@ internal static partial class PackApplication
         private void ValidateBundle(string path)
         {
             var info = new FileInfo(path);
-            if (!info.Exists || info.Length is <= 0 or > 700L * 1024 * 1024)
+            if (!info.Exists || info.Length is <= 0 or > 110L * 1024 * 1024)
             {
                 throw new InvalidOperationException(
-                    $"MSIX bundle has an invalid size or exceeds the 700 MiB release budget: {path}"
+                    $"MSIX bundle has an invalid size or exceeds the 110 MiB release budget: {path}"
                 );
             }
 
@@ -880,7 +740,7 @@ internal static partial class PackApplication
                         StringComparison.Ordinal
                     )
                     || matchingEntries.Length != 1
-                    || matchingEntries[0].Length is <= 0 or > 350L * 1024 * 1024
+                    || matchingEntries[0].Length is <= 0 or > 80L * 1024 * 1024
                 )
                 {
                     throw new InvalidOperationException(
@@ -1042,6 +902,32 @@ internal static partial class PackApplication
             }
         }
 
+        private static void ValidateSourceSbom(string path)
+        {
+            string document = File.ReadAllText(path, Encoding.UTF8).Replace('\\', '/');
+            string[] requiredFields =
+            [
+                "SPDXVersion: SPDX-2.1",
+                "DataLicense: CC0-1.0",
+                "DocumentName: TateYoko",
+                "Creator: Person: Yasunobu Sakashita",
+                "Creator: Tool: reuse-6.2.0",
+                "FileName: ./REUSE.toml",
+                "FileName: ./src/TateYoko.Engine/PdfSpreadConverter.cs",
+                "LicenseInfoInFile: Apache-2.0",
+                "LicenseInfoInFile: CC-BY-4.0",
+            ];
+            if (
+                new FileInfo(path).Length is <= 0 or > 2L * 1024 * 1024
+                || requiredFields.Any(field => !document.Contains(field, StringComparison.Ordinal))
+            )
+            {
+                throw new InvalidOperationException(
+                    "The source SBOM is not a complete REUSE-generated SPDX document."
+                );
+            }
+        }
+
         private static void ValidateNotice(string path)
         {
             string notice = File.ReadAllText(path);
@@ -1052,37 +938,6 @@ internal static partial class PackApplication
             {
                 throw new InvalidOperationException(
                     "The generated third-party notice is incomplete."
-                );
-            }
-        }
-
-        private static void ValidatePortableArchitecture(string path, string architecture)
-        {
-            using FileStream stream = File.OpenRead(path);
-            using var reader = new PEReader(stream);
-            Machine expected = architecture == "arm64" ? Machine.Arm64 : Machine.Amd64;
-            if (reader.PEHeaders.CoffHeader.Machine != expected)
-            {
-                throw new InvalidOperationException(
-                    $"Portable {architecture} has machine type "
-                        + $"{reader.PEHeaders.CoffHeader.Machine}, expected {expected}."
-                );
-            }
-        }
-
-        private void ValidatePortableMetadata(string path)
-        {
-            FileVersionInfo info = FileVersionInfo.GetVersionInfo(path);
-            if (
-                !string.Equals(info.FileVersion, AppxVersion, StringComparison.Ordinal)
-                || !string.Equals(info.ProductVersion, _options.Version, StringComparison.Ordinal)
-                || !string.Equals(info.ProductName, "TateYoko", StringComparison.Ordinal)
-            )
-            {
-                throw new InvalidOperationException(
-                    $"Portable metadata is invalid for {Path.GetFileName(path)}. "
-                        + $"ProductName='{info.ProductName}', ProductVersion='{info.ProductVersion}', "
-                        + $"FileVersion='{info.FileVersion}'."
                 );
             }
         }
@@ -1208,6 +1063,46 @@ internal static partial class PackApplication
                     $"{element.Name.LocalName}.{attributeName} is '{actual}', expected '{expected}'."
                 );
             }
+        }
+
+        private static bool IsFrameworkInternalExtension(XElement extension)
+        {
+            if (
+                (string?)extension.Attribute("Category")
+                    != "windows.activatableClass.inProcessServer"
+                || extension.Parent?.Parent?.Name.LocalName != "Package"
+            )
+            {
+                return false;
+            }
+
+            XElement[] servers =
+            [
+                .. extension
+                    .Elements()
+                    .Where(element => element.Name.LocalName == "InProcessServer"),
+            ];
+            if (servers.Length != 1 || extension.Elements().Count() != 1)
+            {
+                return false;
+            }
+
+            XElement server = servers[0];
+            XElement[] paths =
+            [
+                .. server.Elements().Where(element => element.Name.LocalName == "Path"),
+            ];
+            XElement[] classes =
+            [
+                .. server.Elements().Where(element => element.Name.LocalName == "ActivatableClass"),
+            ];
+            return server.Elements().Count() == 2
+                && paths.Length == 1
+                && paths[0].Value == "Microsoft.Web.WebView2.Core.dll"
+                && classes.Length == 1
+                && (string?)classes[0].Attribute("ActivatableClassId")
+                    == "Microsoft.Web.WebView2.Core.CoreWebView2EnvironmentOptions"
+                && (string?)classes[0].Attribute("ThreadingModel") == "both";
         }
 
         private static bool PathContainsSegment(string path, string segment) =>

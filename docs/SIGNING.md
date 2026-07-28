@@ -1,33 +1,32 @@
 # Code signing
 
-Windowsに配布する3ファイルをSSL.com eSignerでAuthenticode署名します。
+SSL.com eSigner Authenticode-signs the Windows MSIX bundle.
 
 | File | Purpose |
 | --- | --- |
-| `TateYoko-win-x64.exe` | x64 portable ZIPに格納する実行ファイル |
-| `TateYoko-win-arm64.exe` | ARM64 portable ZIPに格納する実行ファイル |
-| `TateYoko.msixbundle` | x64/ARM64 MSIX installation and AppInstaller updates |
+| `TateYoko.msixbundle` | x64/ARM64 installation and AppInstaller updates |
 
-MSIX bundleの署名は含まれるMSIXにも再帰適用されます。`TateYoko.appinstaller`は実行可能
-コードではないためAuthenticode対象ではなく、SHA-256とbuild provenanceで完全性を担保します。
+The bundle signature applies recursively to its MSIX packages.
+`TateYoko.appinstaller` is data, not executable code; SHA-256 and build provenance
+protect it.
 
-署名対象の唯一の定義は`tools/TateYoko.Pack`です。`stage-signing`は上の3ファイルだけを
-flat directoryへコピーし、外部署名後の`collect-signing`は直ちに次を検証します。
-公開時は各署名済みexeを必須の`TateYoko.pri`と組にしたCPU別ZIPへ格納します。
+`tools/TateYoko.Pack` is the only definition of the signing set. `stage-signing`
+copies only the bundle to a flat directory. After external signing,
+`collect-signing` verifies:
 
-- SignToolのdefault Authenticode policyでchainが有効
-- 全署名が有効
-- RFC 3161 timestampが存在
-- signer subjectが`CN=Yasunobu Sakashita`と完全一致
-- MSIX identity/publisher/minimum OS/capabilityが期待値どおり
-- bundleにx64とARM64が1つずつ存在
-- file association、protocol、execution aliasなどのextensionがない
+- the default SignTool Authenticode chain;
+- every signature;
+- an RFC 3161 timestamp;
+- signer subject `CN=Yasunobu Sakashita`;
+- expected package identity, publisher, minimum OS, and capabilities;
+- exactly one x64 and one ARM64 package; and
+- no file association, protocol, execution alias, or other extension.
 
-`publish` jobでも同じ検証を再実行します。検証ロジックをworkflow内へ複製しません。
+The publication job runs the same implementation again.
 
 ## Required secrets
 
-GitHubの`release` environmentへ次を設定します。
+Set all four in the GitHub `release` environment:
 
 | Secret | Meaning |
 | --- | --- |
@@ -36,19 +35,17 @@ GitHubの`release` environmentへ次を設定します。
 | `CREDENTIAL_ID` | eSigner code-signing certificate credential |
 | `ES_TOTP_SECRET` | automated TOTP secret |
 
-4つすべてが必要です。部分設定や未設定はrelease失敗です。workflowは署名なしで公開を続けません。
-`release` environmentにはrequired reviewersを設定し、secretにアクセスできるjobを人の承認後に
-開始してください。
+Missing or partial configuration fails the release. Require a human reviewer before
+jobs may access these secrets.
 
-証明書を変更する場合は、先にmanifest publisherと`tools/TateYoko.Pack`の
-`ExpectedPublisher`を同じidentityへ更新し、`publish=false` smoke testを通します。
+Before rotating the certificate, update the manifest publisher and
+`ExpectedPublisher` in `tools/TateYoko.Pack`, then pass a `publish=false` smoke test.
 
 ## Local verification
 
 ```powershell
-Get-AuthenticodeSignature .\TateYoko-win-x64.exe | Format-List
-Get-AuthenticodeSignature .\TateYoko-win-arm64.exe | Format-List
 Get-AuthenticodeSignature .\TateYoko.msixbundle | Format-List
 ```
 
-表示が`Valid`でも、release gateはtimestampと期待したsigner subjectまで確認します。
+The release gate also checks the timestamp and exact signer subject; `Valid` alone
+is insufficient.

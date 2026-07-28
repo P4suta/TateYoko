@@ -24,23 +24,14 @@
         <!-- Ship only the languages declared in Package.appxmanifest and covered by contract tests. -->
         <SatelliteResourceLanguages>en-US;ja-JP;zh-CN</SatelliteResourceLanguages>
         <DistributionMode Condition="'$(DistributionMode)' == ''">Msix</DistributionMode>
-        <!-- Every shipped form is offline-ready: neither .NET nor Windows App SDK is a prerequisite. -->
+        <!-- MSIX carries .NET while Windows services the Windows App SDK framework package. -->
         <SelfContained Condition="'$(DistributionMode)' != 'Reference'">true</SelfContained>
-        <WindowsAppSDKSelfContained Condition="'$(DistributionMode)' != 'Reference'"
-            >true</WindowsAppSDKSelfContained>
-        <!-- The SDK's generated initializer uses an unrestricted DllImport. We initialize portable builds
-         explicitly and pin runtime lookup to the single-file extraction directory instead. -->
-        <WindowsAppSdkUndockedRegFreeWinRTInitialize>false</WindowsAppSdkUndockedRegFreeWinRTInitialize>
+        <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
 
         <!-- WinUI + trimming can break XAML reflection, so disable trimming. -->
         <PublishTrimmed>false</PublishTrimmed>
-        <!-- ReadyToRun and single-file publishing add SDK build packages that do not belong
-             to the normal build graph. Lock each real distribution graph independently. -->
         <NuGetLockFilePath
-            Condition="'$(PublishReadyToRun)' == 'true' and '$(DistributionMode)' == 'Portable'"
-            >packages.portable.lock.json</NuGetLockFilePath>
-        <NuGetLockFilePath
-            Condition="'$(PublishReadyToRun)' == 'true' and '$(DistributionMode)' == 'Msix'"
+            Condition="'$(PublishReadyToRun)' == 'true' and '$(DistributionMode)' != 'Reference'"
             >packages.msix.lock.json</NuGetLockFilePath>
     </PropertyGroup>
 
@@ -49,17 +40,6 @@
         <SelfContained>false</SelfContained>
         <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
         <EnableWinAppRunSupport>false</EnableWinAppRunSupport>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(DistributionMode)' == 'Portable'">
-        <WindowsPackageType>None</WindowsPackageType>
-        <DefineConstants>$(DefineConstants);TATEYOKO_PORTABLE</DefineConstants>
-        <PublishSingleFile>true</PublishSingleFile>
-        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-        <DebugType>none</DebugType>
-        <DebugSymbols>false</DebugSymbols>
     </PropertyGroup>
 
     <ItemGroup>
@@ -92,6 +72,17 @@
         <Content Include="Assets\StoreLogo.png" CopyToOutputDirectory="PreserveNewest" />
         <Content
             Include="Assets\Wide310x150Logo.scale-200.png"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+        <Content
+            Include="..\..\LICENSE"
+            Link="LICENSE.txt"
+            CopyToOutputDirectory="PreserveNewest"
+        />
+        <Content
+            Include="..\..\build\legal\THIRD-PARTY-NOTICES.txt"
+            Link="THIRD-PARTY-NOTICES.txt"
+            Condition="Exists('..\..\build\legal\THIRD-PARTY-NOTICES.txt')"
             CopyToOutputDirectory="PreserveNewest"
         />
     </ItemGroup>
@@ -147,34 +138,6 @@
     </PropertyGroup>
 
     <Target
-        Name="IncludeGeneratedPriInPortablePublish"
-        BeforeTargets="ComputeFilesToPublish"
-        Condition="'$(DistributionMode)' == 'Portable' and Exists('$(OutDir)$(AssemblyName).pri')"
-    >
-        <ItemGroup>
-            <ResolvedFileToPublish Include="$(OutDir)$(AssemblyName).pri">
-                <RelativePath>$(AssemblyName).pri</RelativePath>
-                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            </ResolvedFileToPublish>
-        </ItemGroup>
-    </Target>
-
-    <Target
-        Name="AcknowledgeCustomPortableRuntimeBootstrap"
-        BeforeTargets="WindowsAppSDKSingleFileVerifyConfiguration"
-        Condition="'$(DistributionMode)' == 'Portable'"
-    >
-        <PropertyGroup>
-            <!-- The SDK checks this property only to prove that the runtime base directory is set
-                 before entry. PortableRuntimeBootstrap performs that work with a module initializer
-                 while avoiding the SDK initializer's unrestricted DllImport search. Package imports
-                 were already evaluated with the property false, so this acknowledgement cannot add
-                 the generated initializer. -->
-            <WindowsAppSdkUndockedRegFreeWinRTInitialize>true</WindowsAppSdkUndockedRegFreeWinRTInitialize>
-        </PropertyGroup>
-    </Target>
-
-    <Target
         Name="RemoveUnsupportedWinUiMuiResources"
         AfterTargets="_UpdateMuiFilesAfterNugetRestore"
     >
@@ -206,5 +169,16 @@
           And '%(None.RecursiveDir)' != 'zh-CN\'"
             />
         </ItemGroup>
+    </Target>
+
+    <Target
+        Name="RequireLegalPayloadForMsix"
+        BeforeTargets="GenerateAppxPackageRecipe"
+        Condition="'$(DistributionMode)' != 'Reference'"
+    >
+        <Error
+            Condition="!Exists('..\..\build\legal\THIRD-PARTY-NOTICES.txt')"
+            Text="Generate build/legal/THIRD-PARTY-NOTICES.txt before packaging."
+        />
     </Target>
 </Project>
