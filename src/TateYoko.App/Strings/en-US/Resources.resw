@@ -21,47 +21,35 @@
   <data name="IdleHeading.Text" xml:space="preserve">
     <value>Turn a PDF into easy-to-read spreads</value>
   </data>
-  <data name="IdleDescription.Text" xml:space="preserve">
-    <value>Choose one PDF. Processing stays entirely on this device.</value>
-  </data>
   <data name="ChoosePdfButton.Content" xml:space="preserve">
     <value>Choose PDF</value>
   </data>
   <data name="DropHint.Text" xml:space="preserve">
     <value>or drop one PDF here · Ctrl+O</value>
   </data>
-  <data name="ReadyHeading.Text" xml:space="preserve">
-    <value>Ready to create spreads</value>
-  </data>
   <data name="OpeningModeLabel.Text" xml:space="preserve">
     <value>How does the book begin?</value>
   </data>
+  <data name="OpeningModeOptions.AutomationProperties.Name" xml:space="preserve">
+    <value>How does the book begin?</value>
+  </data>
   <data name="OpeningStandardTitle.Text" xml:space="preserve">
+    <value>Pages 1–2</value>
+  </data>
+  <data name="OpeningStandardOption.AutomationProperties.Name" xml:space="preserve">
     <value>Pair from page 1</value>
   </data>
-  <data name="OpeningStandardDescription.Text" xml:space="preserve">
-    <value>Place pages 1–2 together, then continue in pairs.</value>
-  </data>
   <data name="OpeningCoverTitle.Text" xml:space="preserve">
+    <value>Cover alone</value>
+  </data>
+  <data name="OpeningCoverOption.AutomationProperties.Name" xml:space="preserve">
     <value>Keep page 1 as a cover</value>
   </data>
-  <data name="OpeningCoverDescription.Text" xml:space="preserve">
-    <value>Keep page 1 alone, then pair pages 2–3.</value>
-  </data>
   <data name="OpeningLeadingBlankTitle.Text" xml:space="preserve">
+    <value>Blank + page 1</value>
+  </data>
+  <data name="OpeningLeadingBlankOption.AutomationProperties.Name" xml:space="preserve">
     <value>Add a blank before page 1</value>
-  </data>
-  <data name="OpeningLeadingBlankDescription.Text" xml:space="preserve">
-    <value>Put page 1 on the left, then continue in pairs.</value>
-  </data>
-  <data name="OutputLabel.Text" xml:space="preserve">
-    <value>Output</value>
-  </data>
-  <data name="ChangeOutputButton.Content" xml:space="preserve">
-    <value>Change…</value>
-  </data>
-  <data name="CollisionNote.Text" xml:space="preserve">
-    <value>Automatic names keep existing files. A destination you choose follows the overwrite confirmation.</value>
   </data>
   <data name="ConvertButton.Content" xml:space="preserve">
     <value>Create spreads</value>
@@ -75,7 +63,7 @@
   <data name="CancelButton.Content" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="PasswordInfo.Title" xml:space="preserve">
+  <data name="PasswordHeading.Text" xml:space="preserve">
     <value>This PDF needs a password</value>
   </data>
   <data name="PasswordInput.Header" xml:space="preserve">
@@ -87,11 +75,8 @@
   <data name="RetryPasswordButton.Content" xml:space="preserve">
     <value>Unlock and create</value>
   </data>
-  <data name="DoneInfo.Title" xml:space="preserve">
+  <data name="DoneHeading.Text" xml:space="preserve">
     <value>Spreads created</value>
-  </data>
-  <data name="DoneInfo.Message" xml:space="preserve">
-    <value>The new PDF is ready.</value>
   </data>
   <data name="OutputActionErrorInfo.Title" xml:space="preserve">
     <value>Windows couldn’t open the output</value>
@@ -108,7 +93,7 @@
   <data name="AnotherPdfButton.Content" xml:space="preserve">
     <value>Convert another PDF</value>
   </data>
-  <data name="ErrorInfo.Title" xml:space="preserve">
+  <data name="ErrorHeading.Text" xml:space="preserve">
     <value>Couldn’t create spreads</value>
   </data>
   <data name="RetryButton.Content" xml:space="preserve">
@@ -163,7 +148,22 @@
     <value>Choose exactly one PDF file.</value>
   </data>
   <data name="ErrorUnsupportedPdfFeature" xml:space="preserve">
-    <value>This PDF uses features that can’t survive spread conversion safely. Links and bookmarks are supported. Choose a copy without forms, notes, attachments, scripts, tags, layers, or custom metadata.</value>
+    <value>This PDF contains a feature outside TateYoko’s static-page profile.</value>
+  </data>
+  <data name="ErrorUnsupportedAnnotation" xml:space="preserve">
+    <value>This PDF contains annotations. Flatten or remove them before creating spreads.</value>
+  </data>
+  <data name="ErrorUnsupportedForm" xml:space="preserve">
+    <value>This PDF contains a form, signature, or protected document behavior that cannot be converted safely.</value>
+  </data>
+  <data name="ErrorUnsupportedAction" xml:space="preserve">
+    <value>This PDF contains an action, script, transition, or multimedia behavior. Remove it before creating spreads.</value>
+  </data>
+  <data name="ErrorUnsupportedAttachment" xml:space="preserve">
+    <value>This PDF contains an attachment or collection. Remove it before creating spreads.</value>
+  </data>
+  <data name="ErrorUnsupportedLayer" xml:space="preserve">
+    <value>This PDF contains layered or viewport content whose appearance cannot be flattened safely.</value>
   </data>
   <data name="ErrorPasswordRequired" xml:space="preserve">
     <value>Enter the password used to open this PDF.</value>

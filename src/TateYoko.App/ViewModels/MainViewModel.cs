@@ -14,7 +14,6 @@ internal partial class MainViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _conversionCancellation;
     private string? _inputPath;
     private string? _outputPath;
-    private OutputCollisionPolicy _collisionPolicy = OutputCollisionPolicy.CreateUnique;
     private bool _disposed;
 
     internal MainViewModel(
@@ -40,9 +39,7 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         nameof(IsError),
         nameof(CanRetryCurrentError)
     )]
-    [NotifyCanExecuteChangedFor(nameof(ConvertCommand))]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
-    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenOutputCommand))]
     [NotifyCanExecuteChangedFor(nameof(ShowInFolderCommand))]
     public partial ConversionState State { get; private set; } = ConversionState.Idle;
@@ -69,9 +66,6 @@ internal partial class MainViewModel : ObservableObject, IDisposable
     public partial string OutputFileName { get; private set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string OutputFolder { get; private set; } = string.Empty;
-
-    [ObservableProperty]
     public partial double ProgressValue { get; private set; }
 
     [ObservableProperty]
@@ -95,7 +89,6 @@ internal partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRetryCurrentError))]
-    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     internal partial PdfSpreadError? LastError { get; private set; }
 
     internal bool CanRetryCurrentError => CanRetry();
@@ -121,11 +114,10 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         }
 
         _inputPath = fullPath;
-        _outputPath = DeriveOutputPath(fullPath);
-        _collisionPolicy = OutputCollisionPolicy.CreateUnique;
+        _outputPath = null;
         InputFileName = Path.GetFileName(fullPath);
-        InputFolder = Path.GetDirectoryName(fullPath) ?? string.Empty;
-        SetOutputDisplay(_outputPath);
+        InputFolder = Path.GetDirectoryName(fullPath)!;
+        OutputFileName = string.Empty;
         ErrorMessage = string.Empty;
         LastError = null;
         ProgressValue = 0;
@@ -135,7 +127,7 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         State = ConversionState.Ready;
     }
 
-    internal void SetExplicitOutput(string path)
+    internal async Task ConvertToAsync(string path)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (!IsReady || !TryNormalizePdfPath(path, out string fullPath))
@@ -154,8 +146,8 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         }
 
         _outputPath = fullPath;
-        _collisionPolicy = OutputCollisionPolicy.ReplaceExisting;
         SetOutputDisplay(_outputPath);
+        await RunConversionAsync(password: null).ConfigureAwait(true);
     }
 
     internal void SetFirstPageMode(FirstPageMode mode)
@@ -201,26 +193,23 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         return RunConversionAsync(password);
     }
 
-    [RelayCommand(CanExecute = nameof(CanConvert))]
-    private Task ConvertAsync() => RunConversionAsync(password: null);
+    internal bool PrepareRetry()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!CanRetry())
+        {
+            return false;
+        }
+
+        ErrorMessage = string.Empty;
+        LastError = null;
+        StatusAnnouncement = InputFileName;
+        State = ConversionState.Ready;
+        return true;
+    }
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _conversionCancellation?.Cancel();
-
-    [RelayCommand(CanExecute = nameof(CanRetry))]
-    private Task RetryAsync()
-    {
-        if (LastError == PdfSpreadError.InvalidRequest)
-        {
-            ErrorMessage = string.Empty;
-            LastError = null;
-            StatusAnnouncement = InputFileName;
-            State = ConversionState.Ready;
-            return Task.CompletedTask;
-        }
-
-        return RunConversionAsync(password: null);
-    }
 
     [RelayCommand(CanExecute = nameof(CanOpenOutput))]
     private void OpenOutput() => RunOutputAction(_shell.Open);
@@ -242,13 +231,15 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    internal static string DeriveOutputPath(string inputPath)
+    internal string SuggestedOutputFileName
     {
-        string directory =
-            Path.GetDirectoryName(inputPath)
-            ?? throw new ArgumentException("Input path has no directory.", nameof(inputPath));
-        string stem = Path.GetFileNameWithoutExtension(inputPath);
-        return Path.Combine(directory, $"{stem}_spread.pdf");
+        get
+        {
+            string stem = _inputPath is null
+                ? string.Empty
+                : Path.GetFileNameWithoutExtension(_inputPath);
+            return string.IsNullOrWhiteSpace(stem) ? "spread.pdf" : $"{stem}_spread.pdf";
+        }
     }
 
     private async Task RunConversionAsync(string? password)
@@ -258,7 +249,6 @@ internal partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _conversionCancellation?.Dispose();
         var conversionCancellation = new CancellationTokenSource();
         _conversionCancellation = conversionCancellation;
         CancellationToken cancellationToken = conversionCancellation.Token;
@@ -292,18 +282,9 @@ internal partial class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            var request = new PdfSpreadRequest(
-                _inputPath,
-                _outputPath,
-                FirstPageMode,
-                _collisionPolicy,
-                password,
-                preservePasswordProtection: true
-            );
-            PdfSpreadResult result = await Task.Run(
-                    () => _converter.Convert(request, progress, cancellationToken),
-                    cancellationToken
-                )
+            var request = new PdfSpreadRequest(_inputPath, _outputPath, FirstPageMode, password);
+            PdfSpreadResult result = await _converter
+                .ConvertAsync(request, progress, cancellationToken)
                 .ConfigureAwait(true);
             if (_disposed || !ReferenceEquals(_conversionCancellation, conversionCancellation))
             {
@@ -324,6 +305,8 @@ internal partial class MainViewModel : ObservableObject, IDisposable
                 ProgressValue = 0;
                 ProgressText = string.Empty;
                 StatusAnnouncement = _strings.Cancelled;
+                _outputPath = null;
+                OutputFileName = string.Empty;
                 State = ConversionState.Ready;
             }
         }
@@ -345,7 +328,12 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!_disposed && ReferenceEquals(_conversionCancellation, conversionCancellation))
             {
-                ShowError(exception.Error);
+                if (exception.Error is PdfSpreadError.WriteFailed or PdfSpreadError.Internal)
+                {
+                    _diagnosticLog.Write(exception);
+                }
+
+                ShowError(exception.Error, exception.TechnicalDetail);
             }
         }
         catch (Exception exception)
@@ -370,18 +358,18 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void ShowError(PdfSpreadError error)
+    private void ShowError(PdfSpreadError error, string? technicalDetail = null)
     {
         LastError = error;
-        ErrorMessage = _strings.ForError(error);
+        ErrorMessage = _strings.ForError(error, technicalDetail);
         StatusAnnouncement = ErrorMessage;
+        _outputPath = null;
         State = ConversionState.Error;
     }
 
     private void SetOutputDisplay(string outputPath)
     {
         OutputFileName = Path.GetFileName(outputPath);
-        OutputFolder = Path.GetDirectoryName(outputPath) ?? string.Empty;
     }
 
     private static bool TryNormalizePdfPath(string? path, out string fullPath)
@@ -416,8 +404,6 @@ internal partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool CanConvert() => IsReady && _inputPath is not null && _outputPath is not null;
-
     private bool CanCancel() => IsConverting && _conversionCancellation is not null;
 
     private bool CanRetry() =>
@@ -427,8 +413,7 @@ internal partial class MainViewModel : ObservableObject, IDisposable
                 or PdfSpreadError.ReadFailed
                 or PdfSpreadError.WriteFailed
                 or PdfSpreadError.Internal
-        && _inputPath is not null
-        && _outputPath is not null;
+        && _inputPath is not null;
 
     private bool CanOpenOutput() => IsDone && _outputPath is not null && File.Exists(_outputPath);
 

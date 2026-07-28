@@ -71,6 +71,40 @@ public sealed class LocalizationContractTests
     }
 
     [Fact]
+    public void ResourceLoaderUsesThePackagedMainResourceMap()
+    {
+        string source = File.ReadAllText(Path.Combine(SourceRoot, "Services", "Localized.cs"));
+
+        Assert.Contains("ResourceLoader Loader = new();", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(".pri", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DragAndDropHandlersAreFullyWired()
+    {
+        XDocument page = XDocument.Load(
+            Path.Combine(SourceRoot, "MainPage.xaml"),
+            LoadOptions.None
+        );
+        XElement dropTarget = page.Descendants()
+            .Single(element =>
+                string.Equals(
+                    (string?)
+                        element.Attribute(
+                            XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml")
+                        ),
+                    "RootDropTarget",
+                    StringComparison.Ordinal
+                )
+            );
+
+        Assert.Equal("True", (string?)dropTarget.Attribute("AllowDrop"));
+        Assert.Equal("OnDragOver", (string?)dropTarget.Attribute("DragOver"));
+        Assert.Equal("OnDragLeave", (string?)dropTarget.Attribute("DragLeave"));
+        Assert.Equal("OnDrop", (string?)dropTarget.Attribute("Drop"));
+    }
+
+    [Fact]
     public void InteractiveAutomationIdsAreUniqueAndComplete()
     {
         XDocument page = XDocument.Load(

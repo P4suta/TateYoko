@@ -360,6 +360,12 @@ internal static class SamplePdf
     internal static void CreateWithInvalidXmp(string path) =>
         CreateRawPdfWithXmp(path, "<not-closed>");
 
+    internal static void CreateEmpty(string path) =>
+        CreateRawPdf(
+            path,
+            ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [] /Count 0 >>"]
+        );
+
     internal static void CreateWithMetadataDictionaryWithoutStream(string path) =>
         CreateRawPdf(
             path,
@@ -381,6 +387,18 @@ internal static class SamplePdf
                 "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
                 $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 300] "
                     + $"/CropBox [{cropBox}] /Resources << >> /Contents 4 0 R >>",
+                "<< /Length 0 >>\nstream\n\nendstream",
+            ]
+        );
+
+    internal static void CreateWithRawMediaBox(string path, string mediaBox) =>
+        CreateRawPdf(
+            path,
+            [
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [{mediaBox}] "
+                    + "/Resources << >> /Contents 4 0 R >>",
                 "<< /Length 0 >>\nstream\n\nendstream",
             ]
         );

@@ -1,4 +1,3 @@
-using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using TateYoko.Engine.Internal;
 
@@ -7,89 +6,65 @@ namespace TateYoko.Engine.Tests;
 public sealed class InternalBoundaryTests
 {
     [Fact]
-    public void ExceptionConstructorsPreserveThePublicContract()
-    {
-        var cause = new IOException("synthetic");
-
-        var empty = new PdfSpreadException();
-        var message = new PdfSpreadException("diagnostic");
-        var nested = new PdfSpreadException("diagnostic", cause);
-        var categorized = new PdfSpreadException(PdfSpreadError.WriteFailed, "write-failed", cause);
-
-        Assert.Equal(PdfSpreadError.Internal, empty.Error);
-        Assert.Equal(PdfSpreadError.Internal, message.Error);
-        Assert.Equal("diagnostic", message.Message);
-        Assert.Equal(PdfSpreadError.Internal, nested.Error);
-        Assert.Same(cause, nested.InnerException);
-        Assert.Equal(PdfSpreadError.WriteFailed, categorized.Error);
-        Assert.Equal("write-failed", categorized.TechnicalDetail);
-        Assert.Same(cause, categorized.InnerException);
-    }
-
-    [Fact]
-    public void AtomicOutputCreatesAnOpaqueSiblingTemporaryPath()
+    public void AtomicOutputCreatesOpaqueSiblingPath()
     {
         string output = Path.Combine(Path.GetTempPath(), "book.pdf");
 
-        string temporary = AtomicOutput.CreateTemporaryPath(output);
+        string first = AtomicOutput.CreateTemporaryPath(output);
+        string second = AtomicOutput.CreateTemporaryPath(output);
 
-        Assert.Equal(Path.GetDirectoryName(output), Path.GetDirectoryName(temporary));
-        Assert.StartsWith(".book.pdf.", Path.GetFileName(temporary), StringComparison.Ordinal);
-        Assert.EndsWith(".tmp", temporary, StringComparison.Ordinal);
-        Assert.NotEqual(temporary, AtomicOutput.CreateTemporaryPath(output));
+        Assert.Equal(Path.GetDirectoryName(output), Path.GetDirectoryName(first));
+        Assert.StartsWith(".book.pdf.", Path.GetFileName(first), StringComparison.Ordinal);
+        Assert.EndsWith(".tmp", first, StringComparison.Ordinal);
+        Assert.NotEqual(first, second);
     }
 
     [Fact]
-    public void AtomicOutputUsesTheFirstAvailableUniqueName()
+    public void AtomicOutputMovesNewFileAndReplacesExistingFile()
     {
-        using var directory = new TempDirectory();
-        string requested = directory.File("book.pdf");
-        string second = directory.File("book (2).pdf");
-        string temporary = directory.File("temporary.pdf");
-        File.WriteAllText(requested, "original");
-        File.WriteAllText(second, "second");
+        using var temp = new TempDirectory();
+        string destination = temp.File("book.pdf");
+        string firstTemporary = temp.File("first.tmp");
+        string secondTemporary = temp.File("second.tmp");
+        File.WriteAllText(firstTemporary, "first");
+        File.WriteAllText(secondTemporary, "second");
+
+        Assert.Equal(destination, AtomicOutput.Commit(firstTemporary, destination));
+        Assert.Equal("first", File.ReadAllText(destination));
+        Assert.Equal(destination, AtomicOutput.Commit(secondTemporary, destination));
+        Assert.Equal("second", File.ReadAllText(destination));
+    }
+
+    [Fact]
+    public void AtomicOutputWrapsCommitFailureWithoutDeletingTemporary()
+    {
+        using var temp = new TempDirectory();
+        string temporary = temp.File("temporary.tmp");
+        string destination = Path.Combine(temp.Path, "missing", "book.pdf");
         File.WriteAllText(temporary, "replacement");
 
-        string committed = AtomicOutput.Commit(
-            temporary,
-            requested,
-            OutputCollisionPolicy.CreateUnique
+        PdfSpreadException error = Assert.Throws<PdfSpreadException>(() =>
+            AtomicOutput.Commit(temporary, destination)
         );
 
-        Assert.Equal(directory.File("book (3).pdf"), committed);
-        Assert.Equal("replacement", File.ReadAllText(committed));
-        Assert.Equal("original", File.ReadAllText(requested));
-        Assert.Equal("second", File.ReadAllText(second));
+        Assert.Equal(PdfSpreadError.WriteFailed, error.Error);
+        Assert.Equal("output-commit-failed", error.TechnicalDetail);
+        Assert.True(File.Exists(temporary));
     }
 
     [Fact]
-    public void AtomicOutputWrapsCommitFailures()
+    public void TemporaryCleanupIsIdempotentAndReportsPersistentFailure()
     {
-        using var directory = new TempDirectory();
-        string temporary = directory.File("temporary.pdf");
-        File.WriteAllText(temporary, "replacement");
-        string missingParent = Path.Combine(directory.Path, "missing", "book.pdf");
-
-        PdfSpreadException exception = Assert.Throws<PdfSpreadException>(() =>
-            AtomicOutput.Commit(temporary, missingParent, OutputCollisionPolicy.ReplaceExisting)
-        );
-
-        Assert.Equal(PdfSpreadError.WriteFailed, exception.Error);
-        Assert.Equal("output-commit-failed", exception.TechnicalDetail);
-        Assert.IsAssignableFrom<IOException>(exception.InnerException);
-    }
-
-    [Fact]
-    public void AtomicOutputCleanupIsIdempotentAndBestEffort()
-    {
-        using var directory = new TempDirectory();
-        string path = directory.File("temporary.pdf");
+        using var temp = new TempDirectory();
+        string path = temp.File("temporary.tmp");
         File.WriteAllText(path, "temporary");
 
         using (File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None))
         {
-            AtomicOutput.DeleteTemporary(path);
-            Assert.True(File.Exists(path));
+            PdfSpreadException error = Assert.Throws<PdfSpreadException>(() =>
+                AtomicOutput.DeleteTemporary(path)
+            );
+            Assert.Equal("temporary-cleanup-failed", error.TechnicalDetail);
         }
 
         AtomicOutput.DeleteTemporary(path);
@@ -97,245 +72,274 @@ public sealed class InternalBoundaryTests
         Assert.False(File.Exists(path));
     }
 
-    [Theory]
-    [InlineData(0, 40, 270)]
-    [InlineData(90, 40, 350)]
-    [InlineData(180, 120, 450)]
-    [InlineData(270, 220, 270)]
-    public void PageProjectionTransformsEverySupportedRotation(
-        int rotation,
-        double expectedX,
-        double expectedY
-    )
-    {
-        using var destination = new PdfDocument();
-        PdfPage page = destination.AddPage();
-        page.Width = XUnit.FromPoint(400);
-        page.Height = XUnit.FromPoint(500);
-        var projection = new PageProjection(
-            page,
-            new Point(30, 40),
-            new PageSize(100, 200),
-            new PdfRectangle(new XPoint(10, 20), new XPoint(110, 220)),
-            rotation
-        );
-
-        XPoint point = projection.TransformPoint(20, 30);
-
-        Assert.Equal(expectedX, point.X, precision: 8);
-        Assert.Equal(expectedY, point.Y, precision: 8);
-    }
-
     [Fact]
-    public void PageProjectionMapsAxesAndRectangles()
+    public void SourceRejectsCorruptedInputAndReleasesValidInput()
     {
-        using var destination = new PdfDocument();
-        PdfPage page = destination.AddPage();
-        page.Width = XUnit.FromPoint(400);
-        page.Height = XUnit.FromPoint(500);
-        var projection = new PageProjection(
-            page,
-            new Point(30, 40),
-            new PageSize(100, 200),
-            new PdfRectangle(new XPoint(10, 20), new XPoint(110, 220)),
-            0
-        );
-
-        Assert.Equal(40, projection.TransformX(20), precision: 8);
-        Assert.Equal(270, projection.TransformY(30), precision: 8);
-        PdfRectangle rectangle = projection.TransformRectangle(
-            new PdfRectangle(new XPoint(20, 30), new XPoint(50, 80))
-        );
-        Assert.Equal(40, rectangle.X1, precision: 8);
-        Assert.Equal(270, rectangle.Y1, precision: 8);
-        Assert.Equal(70, rectangle.X2, precision: 8);
-        Assert.Equal(320, rectangle.Y2, precision: 8);
-    }
-
-    [Fact]
-    public void PageProjectionRejectsInvalidCoordinatesAndAxisTransforms()
-    {
-        using var destination = new PdfDocument();
-        PdfPage page = destination.AddPage();
-        page.Width = XUnit.FromPoint(400);
-        page.Height = XUnit.FromPoint(500);
-        var rotated = new PageProjection(
-            page,
-            new Point(0, 0),
-            new PageSize(100, 200),
-            new PdfRectangle(new XPoint(0, 0), new XPoint(100, 200)),
-            90
-        );
-        var invalidRotation = rotated with { SourceRotation = 45 };
-
-        Assert.Equal(
-            "rotated-axis-transform",
-            Assert.Throws<PdfSpreadException>(() => rotated.TransformX(1)).TechnicalDetail
-        );
-        Assert.Equal(
-            "rotated-axis-transform",
-            Assert.Throws<PdfSpreadException>(() => rotated.TransformY(1)).TechnicalDetail
-        );
-        Assert.Equal(
-            "annotation-coordinate-invalid",
-            Assert
-                .Throws<PdfSpreadException>(() => rotated.TransformPoint(double.NaN, 1))
-                .TechnicalDetail
-        );
-        Assert.Equal(
-            "page-rotation-invalid",
-            Assert
-                .Throws<PdfSpreadException>(() => invalidRotation.TransformPoint(1, 1))
-                .TechnicalDetail
-        );
-    }
-
-    [Fact]
-    public void PdfSourceRejectsMissingDirectoriesAndCorruptedInputs()
-    {
-        using var directory = new TempDirectory();
-        string missing = directory.File("missing.pdf");
-        string corrupted = directory.File("corrupted.pdf");
+        using var temp = new TempDirectory();
+        string corrupted = temp.File("corrupted.pdf");
+        string input = temp.File("input.pdf");
+        string moved = temp.File("moved.pdf");
         File.WriteAllText(corrupted, "not a PDF");
+        SamplePdf.Create(input, (200, 300, 0));
 
-        PdfSpreadException missingError = Assert.Throws<PdfSpreadException>(() =>
-            PdfSource.Open(missing, password: null)
-        );
-        PdfSpreadException directoryError = Assert.Throws<PdfSpreadException>(() =>
-            PdfSource.Open(directory.Path, password: null)
-        );
-        PdfSpreadException corruptedError = Assert.Throws<PdfSpreadException>(() =>
+        PdfSpreadException error = Assert.Throws<PdfSpreadException>(() =>
             PdfSource.Open(corrupted, password: null)
         );
+        PdfSource source = PdfSource.Open(input, password: null);
+        source.Dispose();
+        source.Dispose();
+        File.Move(input, moved);
 
-        Assert.Equal(PdfSpreadError.InputNotFound, missingError.Error);
-        Assert.Equal(PdfSpreadError.ReadFailed, directoryError.Error);
-        Assert.Equal(PdfSpreadError.CorruptedPdf, corruptedError.Error);
-        Assert.Equal("pdf-open-failed", corruptedError.TechnicalDetail);
+        Assert.Equal(PdfSpreadError.CorruptedPdf, error.Error);
+        Assert.Equal("pdf-open-failed", error.TechnicalDetail);
+        Assert.True(File.Exists(moved));
     }
 
     [Fact]
-    public void PdfSourceRejectsInvalidPageAndIncompleteProjectionMaps()
+    public void SourceClassifiesMissingAndUnreadablePaths()
     {
-        using var directory = new TempDirectory();
-        string input = directory.File("input.pdf");
-        string outlineInput = directory.File("outlines.pdf");
-        string linkInput = directory.File("links.pdf");
+        using var temp = new TempDirectory();
+        PdfSpreadException missing = Assert.Throws<PdfSpreadException>(() =>
+            PdfSource.Open(temp.File("missing.pdf"), password: null)
+        );
+        PdfSpreadException unreadable = Assert.Throws<PdfSpreadException>(() =>
+            PdfSource.Open(temp.Path, password: null)
+        );
+
+        Assert.Equal(PdfSpreadError.InputNotFound, missing.Error);
+        Assert.Equal(PdfSpreadError.ReadFailed, unreadable.Error);
+    }
+
+    [Fact]
+    public void SourceRejectsAnEmptyDocument()
+    {
+        using var temp = new TempDirectory();
+        string input = temp.File("empty.pdf");
+        SamplePdf.CreateEmpty(input);
+
+        PdfSpreadException error = Assert.Throws<PdfSpreadException>(() =>
+            PdfSource.Open(input, password: null)
+        );
+
+        Assert.Equal(PdfSpreadError.InvalidPage, error.Error);
+        Assert.Equal("empty-document", error.TechnicalDetail);
+    }
+
+    [Fact]
+    public void OutputVerifierRejectsIncompleteAndUnreadableArtifacts()
+    {
+        using var temp = new TempDirectory();
+        string output = temp.File("output.pdf");
+        SamplePdf.Create(output, (200, 300, 0));
+
+        PdfSpreadException count = Assert.Throws<PdfSpreadException>(() =>
+            OutputVerifier.Verify(
+                output,
+                [new PageSize(200, 300), new PageSize(200, 300)],
+                password: null
+            )
+        );
+        PdfSpreadException size = Assert.Throws<PdfSpreadException>(() =>
+            OutputVerifier.Verify(output, [new PageSize(201, 300)], password: null)
+        );
+
+        string corrupt = temp.File("corrupt.pdf");
+        File.WriteAllText(corrupt, "not a PDF");
+        PdfSpreadException unreadable = Assert.Throws<PdfSpreadException>(() =>
+            OutputVerifier.Verify(corrupt, [new PageSize(200, 300)], password: null)
+        );
+
+        Assert.Equal("output-page-count-mismatch", count.TechnicalDetail);
+        Assert.Equal("output-page-size-mismatch", size.TechnicalDetail);
+        Assert.Equal("output-validation-failed", unreadable.TechnicalDetail);
+    }
+
+    [Fact]
+    public void OutputVerifierAcceptsItsDeclaredDimensionTolerance()
+    {
+        using var temp = new TempDirectory();
+        string output = temp.File("output.pdf");
+        SamplePdf.Create(output, (200, 300, 0));
+
+        OutputVerifier.Verify(
+            output,
+            [new PageSize(200 - OutputVerifier.DimensionTolerancePoints, 300)],
+            password: null
+        );
+        OutputVerifier.Verify(
+            output,
+            [new PageSize(200, 300 - OutputVerifier.DimensionTolerancePoints)],
+            password: null
+        );
+    }
+
+    [Fact]
+    public void SensitiveMemoryIsZeroedAndClosedOnDispose()
+    {
+        var stream = new SensitiveMemoryStream();
+        stream.Write([1, 2, 3, 4]);
+        Assert.True(stream.TryGetBuffer(out ArraySegment<byte> buffer));
+
+        stream.Dispose();
+
+        Assert.Equal([0, 0, 0, 0], buffer.AsSpan(0, 4).ToArray());
+        Assert.Throws<ObjectDisposedException>(() => stream.WriteByte(1));
+    }
+
+    [Fact]
+    public void SourceValidatesPageBoundsAndInvalidRotation()
+    {
+        using var temp = new TempDirectory();
+        string input = temp.File("input.pdf");
+        string invalid = temp.File("invalid.pdf");
         SamplePdf.Create(input, (200, 300, 0));
-        SamplePdf.CreateWithOutlines(outlineInput);
-        SamplePdf.CreateWithLinks(linkInput);
+        SamplePdf.CreateCustomized(invalid, (_, page) => page.Elements.SetInteger("/Rotate", 45));
         using PdfSource source = PdfSource.Open(input, password: null);
-        using PdfSource outlineSource = PdfSource.Open(outlineInput, password: null);
-        using PdfSource linkSource = PdfSource.Open(linkInput, password: null);
-        using var destination = new PdfDocument();
-        PdfPage destinationPage = destination.AddPage();
-        destinationPage.Width = XUnit.FromPoint(400);
-        destinationPage.Height = XUnit.FromPoint(300);
-        PageProjection?[] incomplete = [null];
 
         Assert.Equal(
             "page-index-out-of-range",
-            Assert.Throws<PdfSpreadException>(() => source.GetPageSize(-1)).TechnicalDetail
+            Assert.Throws<PdfSpreadException>(() => source.GetPageSize(1)).TechnicalDetail
         );
         Assert.Equal(
             "page-index-out-of-range",
             Assert.Throws<PdfSpreadException>(() => source.SelectPage(1)).TechnicalDetail
         );
-        Assert.Throws<ArgumentNullException>(() =>
-            source.CreateProjection(0, null!, new Point(0, 0), new PageSize(200, 300))
-        );
         Assert.Equal(
-            "page-index-out-of-range",
-            Assert
-                .Throws<PdfSpreadException>(() =>
-                    source.CreateProjection(
-                        1,
-                        destinationPage,
-                        new Point(0, 0),
-                        new PageSize(200, 300)
-                    )
-                )
-                .TechnicalDetail
+            "page-rotation-invalid",
+            Assert.Throws<PdfSpreadException>(() => PdfSource.Open(invalid, null)).TechnicalDetail
         );
-        Assert.Equal(
-            "destination-page-map-incomplete",
-            Assert
-                .Throws<PdfSpreadException>(() =>
-                    source.CopyNamedDestinationsTo(destination, incomplete)
-                )
-                .TechnicalDetail
-        );
-        Assert.Equal(
-            "outline-page-map-incomplete",
-            Assert
-                .Throws<PdfSpreadException>(() =>
-                    outlineSource.CopyOutlinesTo(destination, incomplete)
-                )
-                .TechnicalDetail
-        );
-        Assert.Equal(
-            "annotation-page-map-incomplete",
-            Assert
-                .Throws<PdfSpreadException>(() =>
-                    linkSource.CopyAnnotationsTo(destination, incomplete, CancellationToken.None)
-                )
-                .TechnicalDetail
-        );
-
-        source.Dispose();
     }
 
     [Fact]
-    public void PaginationRejectsEmptyDocumentsWhenEnumerationBegins()
+    public void SourceRejectsDimensionsOutsideTheStaticPageBudget()
     {
-        PdfSpreadException countError = Assert.Throws<PdfSpreadException>(() =>
-            Pagination.Count(FirstPageMode.Standard, 0)
-        );
-        IEnumerable<PageGroup> sequence = Pagination.Enumerate(FirstPageMode.Standard, 0);
-        PdfSpreadException enumerateError = Assert.Throws<PdfSpreadException>(() =>
-            sequence.ToArray()
+        using var temp = new TempDirectory();
+        string input = temp.File("oversized.pdf");
+        SamplePdf.Create(input, (14_401, 300, 0));
+
+        PdfSpreadException error = Assert.Throws<PdfSpreadException>(() =>
+            PdfSource.Open(input, password: null)
         );
 
-        Assert.Equal("empty-document", countError.TechnicalDetail);
-        Assert.Equal("empty-document", enumerateError.TechnicalDetail);
+        Assert.Equal(PdfSpreadError.InvalidPage, error.Error);
+        Assert.Equal("page-size-invalid", error.TechnicalDetail);
     }
 
     [Fact]
-    public void ConverterRejectsNullCanceledAndMissingOutputDirectoryRequests()
+    public void SourceAcceptsBoundaryDimensionsAndFallsBackFromAnEmptyCropBox()
     {
-        var converter = new PdfSpreadConverter();
-        Assert.Throws<ArgumentNullException>(() =>
-            converter.Convert(null!, cancellationToken: TestContext.Current.CancellationToken)
+        using var temp = new TempDirectory();
+        string maximumWidth = temp.File("maximum-width.pdf");
+        string maximumHeight = temp.File("maximum-height.pdf");
+        string emptyCrop = temp.File("empty-crop.pdf");
+        SamplePdf.Create(maximumWidth, (14_400, 300, 0));
+        SamplePdf.Create(maximumHeight, (300, 14_400, 0));
+        SamplePdf.CreateWithRawCropBox(emptyCrop, "0 0 0 0");
+
+        using PdfSource width = PdfSource.Open(maximumWidth, password: null);
+        using PdfSource height = PdfSource.Open(maximumHeight, password: null);
+        using PdfSource crop = PdfSource.Open(emptyCrop, password: null);
+
+        Assert.Equal(14_400, width.GetPageSize(0).Width);
+        Assert.Equal(14_400, height.GetPageSize(0).Height);
+        Assert.Equal(new PageSize(200, 300), crop.GetPageSize(0));
+        Assert.False(width.WasPasswordProtected);
+    }
+
+    [Theory]
+    [InlineData("10 20 110 220", 100, 200)]
+    [InlineData("10 20 10 220", 200, 300)]
+    [InlineData("10 20 110 20", 200, 300)]
+    public void SourceUsesOnlyAValidTwoDimensionalCropBox(
+        string cropBox,
+        double expectedWidth,
+        double expectedHeight
+    )
+    {
+        using var temp = new TempDirectory();
+        string input = temp.File("crop.pdf");
+        SamplePdf.CreateWithRawCropBox(input, cropBox);
+
+        using PdfSource source = PdfSource.Open(input, password: null);
+
+        Assert.Equal(new PageSize(expectedWidth, expectedHeight), source.GetPageSize(0));
+    }
+
+    [Theory]
+    [InlineData("0 0 0 300")]
+    [InlineData("0 0 200 0")]
+    public void SourceRejectsEachNonPositiveMediaBoxDimension(string mediaBox)
+    {
+        using var temp = new TempDirectory();
+        string input = temp.File("invalid-dimension.pdf");
+        SamplePdf.CreateWithRawMediaBox(input, mediaBox);
+
+        PdfSpreadException error = Assert.Throws<PdfSpreadException>(() =>
+            PdfSource.Open(input, password: null)
         );
 
-        using var directory = new TempDirectory();
-        string input = directory.File("input.pdf");
-        SamplePdf.Create(input, (200, 300, 0));
-        using var cancellation = new CancellationTokenSource();
-        cancellation.Cancel();
-        var canceled = new PdfSpreadRequest(
-            input,
-            directory.File("canceled.pdf"),
-            FirstPageMode.Standard,
-            OutputCollisionPolicy.CreateUnique
-        );
-        var missingDirectory = new PdfSpreadRequest(
-            input,
-            Path.Combine(directory.Path, "missing", "output.pdf"),
-            FirstPageMode.Standard,
-            OutputCollisionPolicy.CreateUnique
-        );
+        Assert.Equal("page-size-invalid", error.TechnicalDetail);
+    }
 
-        Assert.Throws<OperationCanceledException>(() =>
-            converter.Convert(canceled, cancellationToken: cancellation.Token)
+    [Fact]
+    public void SourceAllowsEmptyAnnotationsAndDefaultUserUnits()
+    {
+        using var temp = new TempDirectory();
+        string annotations = temp.File("empty-annotations.pdf");
+        string userUnit = temp.File("default-user-unit.pdf");
+        SamplePdf.CreateCustomized(
+            annotations,
+            (document, page) => page.Elements["/Annots"] = new PdfArray(document)
         );
-        PdfSpreadException outputError = Assert.Throws<PdfSpreadException>(() =>
-            converter.Convert(
-                missingDirectory,
-                cancellationToken: TestContext.Current.CancellationToken
-            )
+        SamplePdf.CreateCustomized(userUnit, (_, page) => page.Elements.SetReal("/UserUnit", 1));
+
+        using PdfSource annotationsSource = PdfSource.Open(annotations, password: null);
+        using PdfSource userUnitSource = PdfSource.Open(userUnit, password: null);
+
+        Assert.Equal(1, annotationsSource.PageCount);
+        Assert.Equal(1, userUnitSource.PageCount);
+    }
+
+    [Fact]
+    public void PaginationAndGeometryEnforceEveryInvariant()
+    {
+        Assert.Throws<PdfSpreadException>(() => new PageSize(double.NaN, 1));
+        Assert.Throws<PdfSpreadException>(() => new PageSize(1, 0));
+        Assert.Throws<PdfSpreadException>(() => PageGroup.Pair(1, 1));
+        Assert.Throws<PdfSpreadException>(() =>
+            SpreadLayout.Single(new PageSize(1, 1), (SpreadHalf)99)
         );
-        Assert.Equal(PdfSpreadError.InvalidRequest, outputError.Error);
-        Assert.Equal("output-directory-not-found", outputError.TechnicalDetail);
+        Assert.Throws<PdfSpreadException>(() => Pagination.Count((FirstPageMode)99, 1));
+        Assert.Throws<PdfSpreadException>(() => Pagination.Count(FirstPageMode.Standard, 0));
+
+        Assert.Equal(2, Pagination.Count(FirstPageMode.Standard, 3));
+        Assert.Equal(3, Pagination.Count(FirstPageMode.Cover, 4));
+    }
+
+    [Fact]
+    public void InternalValueObjectsNeverExposePathsOrPasswords()
+    {
+        using var temp = new TempDirectory();
+        string input = temp.File("private-input.pdf");
+        string output = temp.File("private-output.pdf");
+        var request = new PdfSpreadRequest(input, output, FirstPageMode.Cover, "top-secret");
+
+        string text = request.ToString();
+
+        Assert.DoesNotContain(input, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(output, text, StringComparison.Ordinal);
+        Assert.DoesNotContain("top-secret", text, StringComparison.Ordinal);
+        Assert.Contains(nameof(FirstPageMode.Cover), text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ProgressAndResultRejectInvalidValues()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PdfSpreadProgress(0, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PdfSpreadProgress(2, 1));
+        Assert.Throws<ArgumentException>(() => new PdfSpreadResult("relative.pdf", 1, 1));
+
+        var progress = new PdfSpreadProgress(1, 2);
+        Assert.Equal(0.5, progress.Fraction);
     }
 }

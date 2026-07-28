@@ -62,8 +62,8 @@ internal static class CoverageGate
 {
     private static readonly CoverageBudget[] Budgets =
     [
-        new("engine", "TateYoko.Engine", 0.90m, 0.85m),
-        new("app", "TateYoko", 0.85m, 0.80m),
+        new("engine", "TateYoko.Engine", 0.95m, 0.90m),
+        new("app", "TateYoko", 0.95m, 0.90m),
     ];
 
     internal static int Run(string[] args)

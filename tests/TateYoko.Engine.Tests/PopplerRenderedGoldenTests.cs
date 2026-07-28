@@ -16,7 +16,7 @@ public sealed class PopplerRenderedGoldenTests
     public async Task StandardModeRendersPageOneOnTheRight()
     {
         using var temp = new TempDirectory();
-        string output = Convert(
+        string output = await ConvertAsync(
             temp,
             FirstPageMode.Standard,
             (255, 0, 0, 100, 150),
@@ -39,7 +39,7 @@ public sealed class PopplerRenderedGoldenTests
     public async Task CoverModeKeepsTheCoverRightAndThenPairsPages()
     {
         using var temp = new TempDirectory();
-        string output = Convert(
+        string output = await ConvertAsync(
             temp,
             FirstPageMode.Cover,
             (255, 0, 0, 100, 150),
@@ -70,7 +70,7 @@ public sealed class PopplerRenderedGoldenTests
     public async Task LeadingBlankModeRendersTheBlankRightOfPageOne()
     {
         using var temp = new TempDirectory();
-        string output = Convert(temp, FirstPageMode.LeadingBlank, (255, 0, 0, 100, 150));
+        string output = await ConvertAsync(temp, FirstPageMode.LeadingBlank, (255, 0, 0, 100, 150));
 
         PpmImage image = await RenderedPdf.RenderPageAsync(
             output,
@@ -87,7 +87,7 @@ public sealed class PopplerRenderedGoldenTests
     public async Task MixedPageSizesAreCenteredWithoutScaling()
     {
         using var temp = new TempDirectory();
-        string output = Convert(
+        string output = await ConvertAsync(
             temp,
             FirstPageMode.Standard,
             (255, 0, 0, 100, 200),
@@ -109,7 +109,7 @@ public sealed class PopplerRenderedGoldenTests
         image.AssertColor(375, 100, White);
     }
 
-    private string Convert(
+    private async Task<string> ConvertAsync(
         TempDirectory temp,
         FirstPageMode mode,
         params (byte Red, byte Green, byte Blue, double Width, double Height)[] pages
@@ -118,7 +118,7 @@ public sealed class PopplerRenderedGoldenTests
         string input = temp.File("input.pdf");
         string output = temp.File("output.pdf");
         SamplePdf.CreateColored(input, pages);
-        _converter.Convert(
+        await _converter.ConvertAsync(
             new PdfSpreadRequest(input, output, mode),
             cancellationToken: TestContext.Current.CancellationToken
         );

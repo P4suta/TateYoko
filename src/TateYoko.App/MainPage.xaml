@@ -11,7 +11,6 @@
     <Grid
         x:Name="RootDropTarget"
         AllowDrop="True"
-        AutomationProperties.AutomationId="DropTarget"
         Background="Transparent"
         DragLeave="OnDragLeave"
         DragOver="OnDragOver"
@@ -28,7 +27,7 @@
             VerticalScrollMode="Auto"
         >
             <Grid
-                MaxWidth="680"
+                MaxWidth="560"
                 Padding="24"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
@@ -36,238 +35,134 @@
                 <StackPanel
                     x:Name="IdlePanel"
                     x:Load="{x:Bind ViewModel.IsIdle, Mode=OneWay}"
-                    HorizontalAlignment="Stretch"
-                    Spacing="20"
+                    HorizontalAlignment="Center"
+                    Spacing="14"
                 >
-                    <Border
-                        Padding="32"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="{ThemeResource ControlCornerRadius}"
-                    >
-                        <StackPanel HorizontalAlignment="Center" Spacing="16">
-                            <FontIcon
-                                AutomationProperties.AccessibilityView="Raw"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                Glyph="&#xE896;"
-                            />
-                            <TextBlock
-                                x:Uid="IdleHeading"
-                                HorizontalAlignment="Center"
-                                Style="{StaticResource TitleTextBlockStyle}"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap"
-                            />
-                            <TextBlock
-                                x:Uid="IdleDescription"
-                                MaxWidth="460"
-                                HorizontalAlignment="Center"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                Style="{StaticResource BodyTextBlockStyle}"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap"
-                            />
-                            <Button
-                                x:Name="ChoosePdfButton"
-                                x:Uid="ChoosePdfButton"
-                                AccessKey="O"
-                                AutomationProperties.AutomationId="ChoosePdfButton"
-                                Click="OnChoosePdfClicked"
-                                Style="{StaticResource AccentButtonStyle}"
-                            />
-                            <TextBlock
-                                x:Uid="DropHint"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                            />
-                        </StackPanel>
-                    </Border>
+                    <FontIcon
+                        AutomationProperties.AccessibilityView="Raw"
+                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                        Glyph="&#xE896;"
+                    />
+                    <TextBlock
+                        x:Uid="IdleHeading"
+                        MaxWidth="440"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
+                    />
+                    <Button
+                        x:Name="ChoosePdfButton"
+                        x:Uid="ChoosePdfButton"
+                        AccessKey="O"
+                        HorizontalAlignment="Center"
+                        AutomationProperties.AutomationId="ChoosePdfButton"
+                        Click="OnChoosePdfClicked"
+                        Style="{StaticResource AccentButtonStyle}"
+                    />
+                    <TextBlock
+                        x:Uid="DropHint"
+                        HorizontalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                    />
                 </StackPanel>
 
                 <StackPanel
                     x:Name="ReadyPanel"
                     x:Load="{x:Bind ViewModel.IsReady, Mode=OneWay}"
-                    HorizontalAlignment="Stretch"
-                    Spacing="20"
+                    HorizontalAlignment="Center"
+                    Spacing="18"
                 >
-                    <TextBlock x:Uid="ReadyHeading" Style="{StaticResource TitleTextBlockStyle}" />
-
-                    <Border
-                        Padding="16"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="{ThemeResource ControlCornerRadius}"
+                    <StackPanel
+                        MaxWidth="520"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="10"
                     >
-                        <Grid ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon
-                                AutomationProperties.AccessibilityView="Raw"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                Glyph="&#xEA90;"
-                            />
-                            <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock
-                                    x:Name="InputFileText"
-                                    AutomationProperties.AutomationId="InputFileText"
-                                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                                    Text="{x:Bind ViewModel.InputFileName, Mode=OneWay}"
-                                    TextTrimming="CharacterEllipsis"
-                                />
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{x:Bind ViewModel.InputFolder, Mode=OneWay}"
-                                    TextTrimming="CharacterEllipsis"
-                                />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <StackPanel Spacing="8">
+                        <FontIcon
+                            AutomationProperties.AccessibilityView="Raw"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                            Glyph="&#xEA90;"
+                        />
                         <TextBlock
+                            x:Name="InputFileText"
+                            MaxWidth="470"
+                            VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="InputFileText"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Text="{x:Bind ViewModel.InputFileName, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis"
+                        />
+                    </StackPanel>
+
+                    <StackPanel HorizontalAlignment="Center" Spacing="6">
+                        <TextBlock
+                            x:Name="OpeningModeLabel"
                             x:Uid="OpeningModeLabel"
+                            HorizontalAlignment="Center"
                             Style="{StaticResource BodyStrongTextBlockStyle}"
                         />
                         <RadioButtons
                             x:Name="OpeningModeRadioButtons"
+                            x:Uid="OpeningModeOptions"
+                            MaxColumns="3"
+                            HorizontalAlignment="Center"
                             AutomationProperties.AutomationId="OpeningModeRadioButtons"
                             SelectedIndex="{x:Bind ViewModel.FirstPageModeIndex, Mode=OneWay}"
                             SelectionChanged="OnOpeningModeChanged"
                         >
                             <RadioButton
                                 x:Name="OpeningStandard"
+                                x:Uid="OpeningStandardOption"
                                 AutomationProperties.AutomationId="OpeningStandard"
                             >
-                                <StackPanel>
-                                    <TextBlock
-                                        x:Uid="OpeningStandardTitle"
-                                        Style="{StaticResource BodyStrongTextBlockStyle}"
-                                    />
-                                    <TextBlock
-                                        x:Uid="OpeningStandardDescription"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        TextWrapping="Wrap"
-                                    />
-                                </StackPanel>
+                                <TextBlock x:Uid="OpeningStandardTitle" />
                             </RadioButton>
                             <RadioButton
                                 x:Name="OpeningCover"
+                                x:Uid="OpeningCoverOption"
                                 AutomationProperties.AutomationId="OpeningCover"
                             >
-                                <StackPanel>
-                                    <TextBlock
-                                        x:Uid="OpeningCoverTitle"
-                                        Style="{StaticResource BodyStrongTextBlockStyle}"
-                                    />
-                                    <TextBlock
-                                        x:Uid="OpeningCoverDescription"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        TextWrapping="Wrap"
-                                    />
-                                </StackPanel>
+                                <TextBlock x:Uid="OpeningCoverTitle" />
                             </RadioButton>
                             <RadioButton
                                 x:Name="OpeningLeadingBlank"
+                                x:Uid="OpeningLeadingBlankOption"
                                 AutomationProperties.AutomationId="OpeningLeadingBlank"
                             >
-                                <StackPanel>
-                                    <TextBlock
-                                        x:Uid="OpeningLeadingBlankTitle"
-                                        Style="{StaticResource BodyStrongTextBlockStyle}"
-                                    />
-                                    <TextBlock
-                                        x:Uid="OpeningLeadingBlankDescription"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        TextWrapping="Wrap"
-                                    />
-                                </StackPanel>
+                                <TextBlock x:Uid="OpeningLeadingBlankTitle" />
                             </RadioButton>
                         </RadioButtons>
                     </StackPanel>
 
-                    <Border
-                        Padding="16"
-                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                        CornerRadius="{ThemeResource ControlCornerRadius}"
-                    >
-                        <Grid ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    x:Uid="OutputLabel"
-                                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                                />
-                                <TextBlock
-                                    x:Name="OutputFileText"
-                                    AutomationProperties.AutomationId="OutputFileText"
-                                    Text="{x:Bind ViewModel.OutputFileName, Mode=OneWay}"
-                                    TextTrimming="CharacterEllipsis"
-                                />
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{x:Bind ViewModel.OutputFolder, Mode=OneWay}"
-                                    TextTrimming="CharacterEllipsis"
-                                />
-                                <TextBlock
-                                    x:Uid="CollisionNote"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    TextWrapping="Wrap"
-                                />
-                            </StackPanel>
-                            <Button
-                                x:Name="ChangeOutputButton"
-                                x:Uid="ChangeOutputButton"
-                                Grid.Column="1"
-                                VerticalAlignment="Center"
-                                AutomationProperties.AutomationId="ChangeOutputButton"
-                                Click="OnChangeOutputClicked"
-                            />
-                        </Grid>
-                    </Border>
-
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="12">
                         <Button
                             x:Name="ConvertButton"
                             x:Uid="ConvertButton"
                             AutomationProperties.AutomationId="ConvertButton"
-                            Command="{x:Bind ViewModel.ConvertCommand}"
+                            Click="OnConvertClicked"
                             Style="{StaticResource AccentButtonStyle}"
                         />
                         <Button
                             x:Name="PickAnotherButton"
                             x:Uid="PickAnotherButton"
-                            Grid.Column="1"
                             AutomationProperties.AutomationId="PickAnotherButton"
                             Click="OnChoosePdfClicked"
                         />
-                    </Grid>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel
                     x:Name="ConvertingPanel"
                     x:Load="{x:Bind ViewModel.IsConverting, Mode=OneWay}"
-                    HorizontalAlignment="Stretch"
-                    Spacing="20"
+                    Width="440"
+                    HorizontalAlignment="Center"
+                    Spacing="16"
                 >
                     <TextBlock
                         x:Uid="ConvertingHeading"
+                        HorizontalAlignment="Center"
                         Style="{StaticResource TitleTextBlockStyle}"
                     />
                     <ProgressBar
@@ -280,6 +175,7 @@
                     />
                     <TextBlock
                         x:Name="ProgressText"
+                        HorizontalAlignment="Center"
                         AutomationProperties.AutomationId="ProgressText"
                         AutomationProperties.LiveSetting="Polite"
                         Style="{StaticResource BodyTextBlockStyle}"
@@ -288,7 +184,7 @@
                     <Button
                         x:Name="CancelButton"
                         x:Uid="CancelButton"
-                        HorizontalAlignment="Left"
+                        HorizontalAlignment="Center"
                         AutomationProperties.AutomationId="CancelButton"
                         Command="{x:Bind ViewModel.CancelCommand}"
                     />
@@ -297,16 +193,28 @@
                 <StackPanel
                     x:Name="PasswordPanel"
                     x:Load="{x:Bind ViewModel.IsPasswordRequired, Mode=OneWay}"
-                    HorizontalAlignment="Stretch"
-                    Spacing="16"
+                    Width="440"
+                    HorizontalAlignment="Center"
+                    Spacing="14"
                 >
-                    <InfoBar
-                        x:Uid="PasswordInfo"
-                        IsClosable="False"
-                        IsIconVisible="True"
-                        IsOpen="True"
-                        Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                        Severity="Warning"
+                    <FontIcon
+                        AutomationProperties.AccessibilityView="Raw"
+                        Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                        Glyph="&#59322;"
+                    />
+                    <TextBlock
+                        x:Uid="PasswordHeading"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        TextAlignment="Center"
+                    />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
                     />
                     <PasswordBox
                         x:Name="PasswordInput"
@@ -314,12 +222,7 @@
                         AutomationProperties.AutomationId="PasswordInput"
                         PasswordRevealMode="Peek"
                     />
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="12">
                         <Button
                             x:Name="RetryPasswordButton"
                             x:Uid="RetryPasswordButton"
@@ -330,25 +233,28 @@
                         <Button
                             x:Name="PasswordChooseAnotherButton"
                             x:Uid="PickAnotherButton"
-                            Grid.Column="1"
                             AutomationProperties.AutomationId="PasswordChooseAnotherButton"
                             Click="OnChoosePdfClicked"
                         />
-                    </Grid>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel
                     x:Name="DonePanel"
                     x:Load="{x:Bind ViewModel.IsDone, Mode=OneWay}"
-                    HorizontalAlignment="Stretch"
-                    Spacing="16"
+                    HorizontalAlignment="Center"
+                    Spacing="14"
                 >
-                    <InfoBar
-                        x:Uid="DoneInfo"
-                        IsClosable="False"
-                        IsIconVisible="True"
-                        IsOpen="True"
-                        Severity="Success"
+                    <FontIcon
+                        AutomationProperties.AccessibilityView="Raw"
+                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                        Glyph="&#xE73E;"
+                    />
+                    <TextBlock
+                        x:Uid="DoneHeading"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        TextAlignment="Center"
                     />
                     <InfoBar
                         x:Name="OutputActionErrorInfoBar"
@@ -367,12 +273,7 @@
                         Text="{x:Bind ViewModel.OutputFileName, Mode=OneWay}"
                         TextTrimming="CharacterEllipsis"
                     />
-                    <Grid ColumnSpacing="12" RowSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="12">
                         <Button
                             x:Name="OpenOutputButton"
                             x:Uid="OpenOutputButton"
@@ -383,15 +284,14 @@
                         <Button
                             x:Name="ShowFolderButton"
                             x:Uid="ShowFolderButton"
-                            Grid.Column="1"
                             AutomationProperties.AutomationId="ShowFolderButton"
                             Command="{x:Bind ViewModel.ShowInFolderCommand}"
                         />
-                    </Grid>
+                    </StackPanel>
                     <Button
                         x:Name="AnotherPdfButton"
                         x:Uid="AnotherPdfButton"
-                        HorizontalAlignment="Left"
+                        HorizontalAlignment="Center"
                         AutomationProperties.AutomationId="AnotherPdfButton"
                         Click="OnChoosePdfClicked"
                     />
@@ -400,26 +300,37 @@
                 <StackPanel
                     x:Name="ErrorPanel"
                     x:Load="{x:Bind ViewModel.IsError, Mode=OneWay}"
-                    HorizontalAlignment="Stretch"
-                    Spacing="16"
+                    HorizontalAlignment="Center"
+                    Spacing="14"
+                    AutomationProperties.AutomationId="ErrorInfo"
                 >
-                    <InfoBar
-                        x:Name="ErrorInfo"
-                        x:Uid="ErrorInfo"
-                        AutomationProperties.AutomationId="ErrorInfo"
-                        IsClosable="False"
-                        IsIconVisible="True"
-                        IsOpen="True"
-                        Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                        Severity="Error"
+                    <FontIcon
+                        AutomationProperties.AccessibilityView="Raw"
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Glyph="&#xEA39;"
                     />
-                    <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock
+                        x:Uid="ErrorHeading"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        TextAlignment="Center"
+                    />
+                    <TextBlock
+                        MaxWidth="480"
+                        HorizontalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
+                    />
+                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="12">
                         <Button
                             x:Name="RetryButton"
                             x:Uid="RetryButton"
                             x:Load="{x:Bind ViewModel.CanRetryCurrentError, Mode=OneWay}"
                             AutomationProperties.AutomationId="RetryButton"
-                            Command="{x:Bind ViewModel.RetryCommand}"
+                            Click="OnRetryClicked"
                             Style="{StaticResource AccentButtonStyle}"
                         />
                         <Button

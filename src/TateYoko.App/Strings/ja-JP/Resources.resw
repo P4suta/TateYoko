@@ -21,47 +21,35 @@
   <data name="IdleHeading.Text" xml:space="preserve">
     <value>PDFを読みやすい見開きに</value>
   </data>
-  <data name="IdleDescription.Text" xml:space="preserve">
-    <value>PDFを1つ選ぶだけ。処理はすべてこのPC内で完結します。</value>
-  </data>
   <data name="ChoosePdfButton.Content" xml:space="preserve">
     <value>PDFを選ぶ</value>
   </data>
   <data name="DropHint.Text" xml:space="preserve">
     <value>またはPDFを1つドロップ · Ctrl+O</value>
   </data>
-  <data name="ReadyHeading.Text" xml:space="preserve">
-    <value>見開きの準備ができました</value>
-  </data>
   <data name="OpeningModeLabel.Text" xml:space="preserve">
     <value>本の始まり方</value>
   </data>
+  <data name="OpeningModeOptions.AutomationProperties.Name" xml:space="preserve">
+    <value>本の始まり方</value>
+  </data>
   <data name="OpeningStandardTitle.Text" xml:space="preserve">
+    <value>1–2ページ</value>
+  </data>
+  <data name="OpeningStandardOption.AutomationProperties.Name" xml:space="preserve">
     <value>1ページ目から組む</value>
   </data>
-  <data name="OpeningStandardDescription.Text" xml:space="preserve">
-    <value>1–2ページを並べ、以降も2ページずつ組みます。</value>
-  </data>
   <data name="OpeningCoverTitle.Text" xml:space="preserve">
+    <value>表紙は単独</value>
+  </data>
+  <data name="OpeningCoverOption.AutomationProperties.Name" xml:space="preserve">
     <value>1ページ目を表紙にする</value>
   </data>
-  <data name="OpeningCoverDescription.Text" xml:space="preserve">
-    <value>1ページ目は単独にし、2–3ページから組みます。</value>
-  </data>
   <data name="OpeningLeadingBlankTitle.Text" xml:space="preserve">
+    <value>空白＋1ページ目</value>
+  </data>
+  <data name="OpeningLeadingBlankOption.AutomationProperties.Name" xml:space="preserve">
     <value>1ページ目の前を空白にする</value>
-  </data>
-  <data name="OpeningLeadingBlankDescription.Text" xml:space="preserve">
-    <value>1ページ目を左側に置き、以降を2ページずつ組みます。</value>
-  </data>
-  <data name="OutputLabel.Text" xml:space="preserve">
-    <value>保存先</value>
-  </data>
-  <data name="ChangeOutputButton.Content" xml:space="preserve">
-    <value>変更…</value>
-  </data>
-  <data name="CollisionNote.Text" xml:space="preserve">
-    <value>自動の保存名は上書きせず番号を付けます。自分で選んだ保存先は、上書き確認に従います。</value>
   </data>
   <data name="ConvertButton.Content" xml:space="preserve">
     <value>見開きを作る</value>
@@ -75,7 +63,7 @@
   <data name="CancelButton.Content" xml:space="preserve">
     <value>キャンセル</value>
   </data>
-  <data name="PasswordInfo.Title" xml:space="preserve">
+  <data name="PasswordHeading.Text" xml:space="preserve">
     <value>このPDFにはパスワードが必要です</value>
   </data>
   <data name="PasswordInput.Header" xml:space="preserve">
@@ -87,11 +75,8 @@
   <data name="RetryPasswordButton.Content" xml:space="preserve">
     <value>解除して作成</value>
   </data>
-  <data name="DoneInfo.Title" xml:space="preserve">
+  <data name="DoneHeading.Text" xml:space="preserve">
     <value>見開きを作成しました</value>
-  </data>
-  <data name="DoneInfo.Message" xml:space="preserve">
-    <value>新しいPDFを利用できます。</value>
   </data>
   <data name="OutputActionErrorInfo.Title" xml:space="preserve">
     <value>Windowsで保存先を開けませんでした</value>
@@ -108,7 +93,7 @@
   <data name="AnotherPdfButton.Content" xml:space="preserve">
     <value>別のPDFを変換</value>
   </data>
-  <data name="ErrorInfo.Title" xml:space="preserve">
+  <data name="ErrorHeading.Text" xml:space="preserve">
     <value>見開きを作成できませんでした</value>
   </data>
   <data name="RetryButton.Content" xml:space="preserve">
@@ -163,7 +148,22 @@
     <value>PDFファイルを1つだけ選んでください。</value>
   </data>
   <data name="ErrorUnsupportedPdfFeature" xml:space="preserve">
-    <value>このPDFには、見開き化で安全に保持できない機能が含まれています。リンクとしおりには対応しています。フォーム、メモ、添付、スクリプト、タグ、レイヤー、独自メタデータを除いたコピーを選んでください。</value>
+    <value>このPDFには、TateYokoの静的ページ対象外の機能が含まれています。</value>
+  </data>
+  <data name="ErrorUnsupportedAnnotation" xml:space="preserve">
+    <value>このPDFには注釈が含まれています。注釈をページへ焼き込むか削除してから見開き化してください。</value>
+  </data>
+  <data name="ErrorUnsupportedForm" xml:space="preserve">
+    <value>このPDFにはフォーム、署名、または保護された文書動作が含まれているため、安全に変換できません。</value>
+  </data>
+  <data name="ErrorUnsupportedAction" xml:space="preserve">
+    <value>このPDFにはアクション、スクリプト、画面切替、またはマルチメディア動作が含まれています。削除してから見開き化してください。</value>
+  </data>
+  <data name="ErrorUnsupportedAttachment" xml:space="preserve">
+    <value>このPDFには添付ファイルまたはコレクションが含まれています。削除してから見開き化してください。</value>
+  </data>
+  <data name="ErrorUnsupportedLayer" xml:space="preserve">
+    <value>このPDFには、安全に固定できないレイヤーまたはビューポート内容が含まれています。</value>
   </data>
   <data name="ErrorPasswordRequired" xml:space="preserve">
     <value>このPDFを開くためのパスワードを入力してください。</value>

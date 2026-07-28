@@ -1,9 +1,5 @@
 <Project>
-    <!--
-    PDFsharp 6.2 exposes optional barcode, charting, sample, quality, and font assemblies as
-    runtime assets even when an application does not reference them. Keep every build and
-    publish path on the same tested minimum: PdfSharp + PdfSharp.Shared + PdfSharp.System.
-  -->
+    <!-- PDFsharp exposes unused optional modules as runtime assets. -->
     <Target
         Name="RemoveUnusedPdfSharpAssembliesFromBuild"
         AfterTargets="ResolveAssemblyReferences"
@@ -42,9 +38,7 @@
         </ItemGroup>
     </Target>
 
-    <!-- .NET publish and single-project MSIX each materialize their own item graph after
-         ResolveAssemblyReferences. Remove the same optional PDFsharp modules at both final
-         boundaries so an SDK target cannot reintroduce them after the normal build filter. -->
+    <!-- Publish and MSIX rematerialize item graphs after the build filter. -->
     <Target
         Name="RemoveUnusedPdfSharpAssembliesFromResolvedPublish"
         AfterTargets="ComputeFilesToPublish"
@@ -64,7 +58,7 @@
     </Target>
 
     <Target
-        Name="RemoveUnusedPdfSharpAssembliesFromMsixPayload"
+        Name="RemoveUnusedFilesFromMsixPayload"
         AfterTargets="GetPackagingOutputs"
         BeforeTargets="_ComputeAppxPackagePayload"
     >
@@ -77,7 +71,13 @@
           Or '%(PackagingOutputs.Filename)' == 'PdfSharp.Cryptography'
           Or '%(PackagingOutputs.Filename)' == 'PdfSharp.Quality'
           Or '%(PackagingOutputs.Filename)' == 'PdfSharp.Snippets'
-          Or '%(PackagingOutputs.Filename)' == 'PdfSharp.WPFonts'"
+          Or '%(PackagingOutputs.Filename)' == 'PdfSharp.WPFonts'
+          Or '%(PackagingOutputs.Filename)' == 'Microsoft.DiaSymReader.Native.amd64'
+          Or '%(PackagingOutputs.Filename)' == 'Microsoft.DiaSymReader.Native.arm64'
+          Or '%(PackagingOutputs.Filename)' == 'mscordaccore'
+          Or '%(PackagingOutputs.Filename)' == 'mscordaccore_amd64_amd64_10.0.1026.32716'
+          Or '%(PackagingOutputs.Filename)' == 'mscordaccore_arm64_arm64_10.0.1026.32716'
+          Or '%(PackagingOutputs.Filename)' == 'mscordbi'"
             />
         </ItemGroup>
     </Target>

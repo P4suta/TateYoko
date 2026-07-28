@@ -5,7 +5,6 @@ using TateYoko.Engine;
 
 namespace TateYoko.App;
 
-/// <summary>Application composition root.</summary>
 public partial class App : Application, IDisposable
 {
     private MainViewModel? _viewModel;

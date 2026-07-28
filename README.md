@@ -1,59 +1,56 @@
 <div align="center">
 
-<img src="assets/AppIcon.png" width="104" height="104" alt="縦横 (TateYoko) app icon" />
+<img src="assets/AppIcon.png" width="104" height="104" alt="TateYoko app icon" />
 
-# 縦横 · TateYoko
+# TateYoko
 
-**縦書きPDFを、ワイド画面で自然に読める右綴じ見開きへ。**
+**Turn vertical-writing PDFs into natural right-to-left spreads for wide screens.**
 
 [![CI](https://github.com/P4suta/TateYoko/actions/workflows/ci.yml/badge.svg)](https://github.com/P4suta/TateYoko/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/P4suta/TateYoko/badge)](https://scorecard.dev/viewer/?uri=github.com/P4suta/TateYoko)
+[![REUSE status](https://api.reuse.software/badge/github.com/P4suta/TateYoko)](https://api.reuse.software/info/github.com/P4suta/TateYoko)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![Windows 11](https://img.shields.io/badge/Windows%2011-x64%20%7C%20ARM64-0078D6?logo=windows11&logoColor=white)
 
 </div>
 
-## できること
+## What it does
 
-縦書き本の1ページPDFを2ページずつ横に並べ、右から左へ読む見開きPDFを作ります。
-ファイルをドロップし、最初のページの扱いを選び、変換するだけです。
+TateYoko places two portrait pages side by side in right-to-left reading order.
+Drop one PDF, choose how page 1 should start, and select a destination.
 
 ```text
-入力:  1, 2, 3, 4, 5
-出力: [ 2 | 1 ] [ 4 | 3 ] [ 空白 | 5 ]
+Input:  1, 2, 3, 4, 5
+Output: [ 2 | 1 ] [ 4 | 3 ] [ blank | 5 ]
 ```
 
-最初のページは次の3通りから選べます。
+Page 1 can:
 
-- 右から開始 — 1ページ目を最初の見開きの右へ配置
-- 表紙を単独表示 — 1ページ目を単独の表紙として扱う
-- 左から開始 — 右側を空白にして1ページ目を左へ配置
+- start on the right;
+- remain alone as a cover; or
+- start on the left with a blank right half.
 
-ページごとのサイズが異なるPDF、奇数ページ、パスワードで保護されたPDFにも対応します。
-出力は入力と同じフォルダーの `<元名>_spread.pdf` です。既存ファイルは上書きせず、
-必要なら番号付きの名前を原子的に確保します。
+Mixed page sizes, odd page counts, rotations, crop boxes, and encrypted PDFs are
+supported. Every conversion opens the Windows Save dialog with
+`<source>_spread.pdf` as the suggested name. Existing files are replaced only after
+Windows confirms the overwrite and TateYoko verifies the complete temporary PDF.
 
-Webリンク、文書内リンク、名前付きリンク先、階層しおり、文書の言語と標準メタデータも
-見開き上の位置へ合わせて保持します。フォーム、メモ、添付、スクリプト、タグ付き構造、
-レイヤー、独自XMPなどを完全に保持できないPDFは、欠落した出力を作らず変換前に停止します。
+The product contract is deliberately narrow: TateYoko preserves the static visual
+appearance of self-scanned pages. It does not rebuild OCR, bookmarks, links, page
+labels, or input metadata. Forms, signatures, annotations, attachments, scripts,
+page actions, layers, and other active features are rejected before output is
+written.
 
-## インストール
+## Install
 
-対応環境はWindows 11のx64とARM64です。
+TateYoko supports Windows 11 on x64 and ARM64. Install
+[`TateYoko.appinstaller`](https://github.com/P4suta/TateYoko/releases) to receive
+the signed MSIX bundle and Windows-managed updates. The bundle carries .NET and
+uses the serviced Windows App SDK framework package.
 
-推奨は[Releases](https://github.com/P4suta/TateYoko/releases)にある
-`TateYoko.appinstaller`です。署名済みMSIX bundleをインストールし、公開済みの最新版を
-自動確認します。MSIXとportable版はどちらも.NETとWindows App SDKを内包するため、
-別のランタイムを事前インストールする必要はありません。インストールせず使う場合は、
-CPUに合うZIPを展開し、`TateYoko.exe`と`TateYoko.pri`を同じフォルダーに置いたまま
-起動します。
-
-- `TateYoko-win-x64.zip`
-- `TateYoko-win-arm64.zip`
-
-すべての公開実行コードはAuthenticode署名とRFC 3161タイムスタンプを必須とし、ZIPを
-含む全公開物へチェックサム、CycloneDX SBOM、第三者ライセンス、GitHub artifact
-attestationを付けます。署名できないビルドは公開されません。
+Every executable release is Authenticode-signed and RFC 3161 timestamped. Releases
+also include checksums, runtime and source SBOMs, third-party notices, and GitHub
+artifact attestations.
 
 ```powershell
 gh attestation verify TateYoko.msixbundle --repo P4suta/TateYoko
@@ -61,56 +58,53 @@ Get-FileHash TateYoko.msixbundle -Algorithm SHA256
 Get-AuthenticodeSignature TateYoko.msixbundle
 ```
 
-## プライバシーと公開範囲
+## Privacy and exposed surface
 
-変換は端末内だけで完結します。テレメトリ、更新確認を含むアプリ独自のネットワーク通信、
-広告、アカウント、クラウド保存はありません。AppInstallerによる更新確認はWindowsの
-配布機構が行います。
+Conversion is local and offline. The app has no telemetry, advertising, accounts,
+cloud storage, or application-controlled network traffic. Windows alone checks for
+AppInstaller updates after the user installs that distribution.
 
-PDFはユーザーが画面で1ファイルずつ選択します。ファイル関連付け、プロトコル、Explorer
-メニュー、コマンドライン入力は公開していません。暗号化PDFのパスワードは必要な変換中
-だけメモリに保持し、設定やログへ保存しません。診断ログにはファイルパスやPDF内容を
-書きません。
+The user selects one input and one output through Windows pickers. TateYoko exposes
+no file association, protocol, Explorer command, or command-line input. PDF
+passwords exist only during the active conversion and are never persisted or
+logged. Diagnostic logs contain neither file paths nor PDF content.
 
-## 設計
+## Design
 
-公開APIは小さな`TateYoko.Engine`だけです。`TateYoko.App`はWinUI 3の状態機械とOS連携を
-担当し、PDFsharpはEngine内部へ閉じています。
+There is no public API. `TateYoko.Engine` is an internal static-page conversion
+implementation referenced only by the app and tests. `TateYoko.App` owns the WinUI
+state machine and operating-system integration.
 
-```text
-TateYoko.App  ──>  TateYoko.Engine  ──>  PDFsharp
-      │                    │
-  WinUI/MVVM          公開変換契約
-```
+The converter writes a unique temporary file beside the selected destination,
+reopens it to verify page count, dimensions, and encryption, then commits it
+atomically. Cancellation and failures preserve the previous destination.
 
-変換処理は全ページをメモリへ載せずに順次処理し、同じフォルダーの一時ファイルへ書いた後、
-再オープン検証に成功した場合だけ出力名へ確定します。キャンセル・例外・プロセス競合でも
-既存出力を壊さないことをテストしています。
+## Develop
 
-## 開発
-
-`.NET 10.0.302`、`just`、補助ツールはすべてバージョン固定です。
+The .NET SDK, command runner, analyzers, REUSE, spelling checker, and release tools
+are version-pinned.
 
 ```powershell
 mise install
-mise exec -- just restore          # 初回/依存更新時。lock fileも更新
-mise exec -- just ci               # CIと同じ全ゲート
-mise exec -- just run              # Developer Modeが必要
+mise exec -- just restore
+mise exec -- just ci
+mise exec -- just run
 mise exec -- just dist-build 0.1.0
 ```
 
-実UIのRC確認は`just run`で表示されたPIDを
-`mise exec -- just ui-test <PID>`へ渡します。キーボード、Windowsピッカー、主要状態、
-アクセシビリティIDを一括検査し、状態別PNGとJSON結果を`build/ui-tests/`へ保存します。
+`just run` requires Windows Developer Mode. Pass its process ID to
+`mise exec -- just ui-test <PID>` for keyboard, picker, accessibility, and visual
+state checks. Evidence is written to `build/ui-tests/`.
 
-`just ci`はlocked restore、format、全警告エラーのbuild、テスト、line/branch coverage、
-NuGet監査、法務notice生成、mutation testingを実行します。PDFレイアウトはPopplerで
-レンダリングしたピクセル結果でも検証し、1000ページの時間・メモリ予算も固定しています。
+`just ci` enforces locked dependencies, REUSE 3.3, spelling and formatting, a
+warning-free build, tests, line and branch coverage, vulnerability auditing,
+third-party notices, and mutation testing. Poppler golden tests verify rendered
+pixels, and a 1,000-page fixture enforces time, memory, and output-size budgets.
 
-詳しくは[CONTRIBUTING.md](CONTRIBUTING.md)、リリース手順は
-[docs/RELEASING.md](docs/RELEASING.md)を参照してください。
+See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 
-TateYokoは[Apache-2.0](LICENSE)です。配布物に正確な
-`THIRD-PARTY-NOTICES.txt`を同梱します。
+TateYoko is licensed under [Apache-2.0](LICENSE). File-level copyright and license
+data live in [REUSE.toml](REUSE.toml) and [LICENSES](LICENSES/).

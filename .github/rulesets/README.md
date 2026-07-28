@@ -15,10 +15,14 @@ same file.
 
 | Ruleset | Target | Effect |
 | ------- | ------ | ------ |
-| `protect-default-branch` | `main` | PR required (squash-only, 0 approvals, all review threads resolved), CI `test` must pass, linear history, no force-push, no deletion |
+| `protect-default-branch` | `main` | PR required (squash-only, 1 independent approval, latest push approved by someone else, all review threads resolved), CI `test` must pass, linear history, no force-push, no deletion |
 | `require-signed-commits` | `main` | commits on `main` must be signed (squash-merges are signed by GitHub) |
 | `protect-release-tags` | `v*` tags | release tags cannot be force-moved or deleted (immutable releases) |
 
 Everything reaches `main` through a squash-merged PR, including the Release PR.
 GitHub authors and signs the squash commit, so `require-signed-commits` is satisfied
 without contributors having to sign locally.
+
+The repository currently has only one collaborator. Applying this ruleset intentionally
+blocks merges and releases until a trusted independent reviewer is added. Do not add a
+self-review bypass or a placeholder `CODEOWNERS` entry.
