@@ -12,7 +12,7 @@
         <PackageReference Include="PDFsharp" Version="6.2.4" />
         <!-- PDFsharp's broad lower bound otherwise resolves an out-of-support 8.x crypto assembly.
          Keep cryptographic parsing on the same serviced .NET 10 patch line as the application. -->
-        <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.10" />
+        <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.11" />
     </ItemGroup>
 
     <ItemGroup>
