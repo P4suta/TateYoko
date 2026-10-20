@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>P4suta/renovate-config"],
+  "packageRules": [
+    {
+      "description": "Keep PDFsharp on the MIT-licensed 6.2 line.",
+      "matchDatasources": ["nuget"],
+      "matchPackageNames": ["PDFsharp"],
+      "allowedVersions": "/^6\\.2\\./"
+    }
+  ]
+}

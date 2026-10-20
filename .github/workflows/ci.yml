@@ -73,6 +73,11 @@ jobs:
           allow-licenses: >-
             0BSD, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MIT,
             MS-PL, Unicode-3.0, Zlib
+          # These metadata corrections apply only to the reviewed dependency graphs.
+          # Any changed graph clears them because the action ignores package URL versions.
+          allow-dependencies-licenses: >-
+            ${{ hashFiles('**/packages*.lock.json') == 'eef1972e6d58bec63abea5f62c37beeb9ce46304dc5329763ec87ee038d02070' &&
+                'pkg:nuget/Microsoft.Windows.SDK.BuildTools@10.0.28000.2705,pkg:nuget/Microsoft.WindowsAppSDK.Foundation@2.3.12,pkg:nuget/Microsoft.WindowsAppSDK.InteractiveExperiences@2.1.9,pkg:nuget/Microsoft.WindowsAppSDK.Runtime@2.5.1,pkg:nuget/Microsoft.WindowsAppSDK.WinUI@2.3.9,pkg:nuget/Magick.NET-Q16-AnyCPU@14.17.2' || '' }}
 
   secrets:
     runs-on: ubuntu-24.04

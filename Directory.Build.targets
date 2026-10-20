@@ -75,8 +75,7 @@
           Or '%(PackagingOutputs.Filename)' == 'Microsoft.DiaSymReader.Native.amd64'
           Or '%(PackagingOutputs.Filename)' == 'Microsoft.DiaSymReader.Native.arm64'
           Or '%(PackagingOutputs.Filename)' == 'mscordaccore'
-          Or '%(PackagingOutputs.Filename)' == 'mscordaccore_amd64_amd64_10.0.1026.32716'
-          Or '%(PackagingOutputs.Filename)' == 'mscordaccore_arm64_arm64_10.0.1026.32716'
+          Or $([System.String]::Copy('%(PackagingOutputs.Filename)').StartsWith('mscordaccore_'))
           Or '%(PackagingOutputs.Filename)' == 'mscordbi'"
             />
         </ItemGroup>

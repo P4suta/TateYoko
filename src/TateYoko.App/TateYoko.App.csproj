@@ -106,7 +106,7 @@
             Version="2.1.9"
         />
         <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.5.1" />
-        <!-- Keep the component set aligned with Runtime 2.3.1's validated matrix. -->
+        <!-- Keep the component set aligned with the runtime package's validated matrix. -->
         <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
         <PackageReference
             Include="Microsoft.Windows.SDK.BuildTools"
