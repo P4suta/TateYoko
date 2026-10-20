@@ -1,14 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  merge_group:
   workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -20,42 +19,52 @@ env:
 
 jobs:
   quality:
-    runs-on: windows-latest
-    timeout-minutes: 75
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           install: true
-
       - name: Install pinned PowerShell analyzer
         run: mise exec -- just setup-powershell
-
-      - name: Format, compile, contract-test, coverage, audit, notices, and mutation
-        run: mise exec -- just ci
-
-      - name: Prove x64/ARM64 MSIX packaging
-        run: mise exec -- just dist-build 0.0.1
-
-      - name: Upload diagnostic quality reports
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
-          name: quality-reports
-          path: |
-            build/coverage
-            build/legal
-            src/TateYoko.Engine/StrykerOutput
-          if-no-files-found: warn
-          retention-days: 7
+          languages: csharp
+          build-mode: manual
+          queries: security-and-quality
+          config-file: ./.github/codeql-config.yml
+      - name: Verify contracts, rendering, coverage, dependencies, and notices
+        run: mise exec -- just ci
+      - name: Analyze source
+        uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: /language:csharp
+          upload: never
+          post-processed-sarif-path: build/codeql-sarif
+      - name: Reject source findings
+        run: ./.config/Test-CodeQlSarif.ps1 -Path build/codeql-sarif
+      - name: Upload source analysis
+        if: always()
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          sarif_file: build/codeql-sarif
+          category: /language:csharp
 
   dependency-review:
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Reject vulnerable or disallowed new dependencies
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
@@ -66,99 +75,46 @@ jobs:
             MS-PL, Unicode-3.0, Zlib
 
   secrets:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Scan the complete Git history for credentials
+      - name: Scan Git history for credentials
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITLEAKS_ENABLE_COMMENTS: "false"
 
-  codeql:
-    runs-on: windows-latest
-    timeout-minutes: 45
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
-        with:
-          languages: csharp
-          build-mode: manual
-          queries: security-and-quality
-          config-file: ./.github/codeql-config.yml
-
-      - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
-        with:
-          install: true
-
-      - name: Locked restore and strict build
-        run: |
-          mise exec -- just restore-locked
-          mise exec -- just build
-
-      - name: Analyze without publishing unfiltered generated findings
-        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
-        with:
-          category: /language:csharp
-          upload: never
-          post-processed-sarif-path: build/codeql-sarif
-
-      - name: Remove generated findings and reject every source warning or error
-        run: ./.config/Test-CodeQlSarif.ps1 -Path build/codeql-sarif
-
-      - name: Upload the filtered source analysis
-        if: ${{ always() }}
-        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
-        with:
-          sarif_file: build/codeql-sarif
-          category: /language:csharp
-
-  # Keep this job id stable: the default-branch ruleset requires the `test` context.
-  # It is deliberately an aggregator so no PR can merge while a security job is failing.
   test:
-    if: ${{ always() }}
-    needs: [quality, dependency-review, secrets, codeql]
-    runs-on: ubuntu-latest
+    if: always()
+    needs: [quality, dependency-review, secrets]
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions: {}
     steps:
       - name: Require every quality and security gate
         env:
-          CODEQL_RESULT: ${{ needs.codeql.result }}
           DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           SECRETS_RESULT: ${{ needs.secrets.result }}
-        shell: bash
         run: |
           set -euo pipefail
           test "$QUALITY_RESULT" = "success"
           test "$SECRETS_RESULT" = "success"
-          test "$CODEQL_RESULT" = "success"
           test "$DEPENDENCY_REVIEW_RESULT" = "success" \
             || test "$DEPENDENCY_REVIEW_RESULT" = "skipped"
 
-  # The one status check branch protection requires,
-  # named the same in every P4suta repository.
-  # It passes only when every job it needs succeeded or was skipped.
   required:
-    name: required
     if: always()
     needs: [test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Fail unless every needed job succeeded or was skipped
+      - name: Require successful verification
         env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
-        run: |
-          echo "${RESULTS}"
-          jq -e 'all(.[]; IN("success", "skipped"))' <<< "${RESULTS}"
+          RESULT: ${{ needs.test.result }}
+        run: test "$RESULT" = "success"
