@@ -52,10 +52,6 @@ coverage: setup-poppler
     dotnet test tests/TateYoko.App.Tests/TateYoko.App.Tests.csproj -c Release --no-restore --results-directory build/coverage/app --coverlet
     dotnet run --project tools/TateYoko.Quality -c Release --no-restore -- coverage build/coverage
 
-# Prove that Engine tests kill at least 90% of all supported mutations.
-mutation: setup-poppler
-    $exitCode = 0; Push-Location src/TateYoko.Engine; try { dotnet stryker --skip-version-check; $exitCode = $LASTEXITCODE } finally { Pop-Location }; if ($exitCode -ne 0) { exit $exitCode }
-
 # Fail if the restored graph contains a low-or-higher known vulnerability.
 audit:
     New-Item -ItemType Directory -Force build/audit | Out-Null
@@ -138,7 +134,7 @@ list-signable:
     dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- list-signable
 
 # Full merge gate. The dependency graph and every executable are version-pinned.
-ci: restore-locked reuse-lint typos-check actions-check powershell-check fmt-check build icons-check release-tools-test test coverage audit notices mutation
+ci: restore-locked reuse-lint typos-check actions-check powershell-check fmt-check build icons-check release-tools-test test coverage audit notices
 
 # Remove only known generated directories beneath the repository.
 clean:

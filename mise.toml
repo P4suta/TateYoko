@@ -1,5 +1,4 @@
 [tools]
-dotnet = "10.0.302"
 just = "1.54.0"
 actionlint = "1.7.12"
 typos = "1.47.0"
@@ -7,7 +6,8 @@ python = "3.14.6"
 "pipx:reuse" = { version = "6.2.0", extras = "charset-normalizer" }
 
 lefthook = "2.1.9"
-"cargo:committed" = "1.1.11"
+"github:crate-ci/committed" = "v1.1.11"
 
 [settings]
 experimental = true
+idiomatic_version_file_enable_tools = ["dotnet"]
