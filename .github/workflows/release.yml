@@ -107,13 +107,10 @@ jobs:
     timeout-minutes: 25
     environment: release
     permissions:
+      id-token: write
       contents: read
     env:
-      HAVE_SIGNING: >-
-        ${{ secrets.ES_USERNAME != '' &&
-            secrets.ES_PASSWORD != '' &&
-            secrets.CREDENTIAL_ID != '' &&
-            secrets.ES_TOTP_SECRET != '' }}
+      HAVE_SIGNING: ${{ vars.DOPPLER_SIGN_WINDOWS_IDENTITY_ID != '' }}
     steps:
       - name: Refuse an unsigned release
         shell: pwsh
@@ -146,14 +143,38 @@ jobs:
           $version = $env:TAG.Substring(1)
           mise exec -- just sign-stage $version
 
+      - name: Fetch sign_windows credentials
+        id: doppler_sign_windows_6
+        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534
+        with:
+          auth-method: oidc
+          doppler-identity-id: ${{ vars.DOPPLER_SIGN_WINDOWS_IDENTITY_ID }}
+          doppler-project: tateyoko
+          doppler-config: sign_windows
+          inject-env-vars: false
+      - name: Reject missing or unresolved sign_windows credentials
+        if: >-
+          ${{ steps.doppler_sign_windows_6.outcome == 'success' && (
+          steps.doppler_sign_windows_6.outputs.SSLDOTCOM_CREDENTIAL_ID == '' ||
+          startsWith(steps.doppler_sign_windows_6.outputs.SSLDOTCOM_CREDENTIAL_ID, '${') ||
+          steps.doppler_sign_windows_6.outputs.SSLDOTCOM_PASSWORD == '' ||
+          startsWith(steps.doppler_sign_windows_6.outputs.SSLDOTCOM_PASSWORD, '${') ||
+          steps.doppler_sign_windows_6.outputs.SSLDOTCOM_TOTP_SECRET == '' ||
+          startsWith(steps.doppler_sign_windows_6.outputs.SSLDOTCOM_TOTP_SECRET, '${') ||
+          steps.doppler_sign_windows_6.outputs.SSLDOTCOM_USERNAME == '' ||
+          startsWith(steps.doppler_sign_windows_6.outputs.SSLDOTCOM_USERNAME, '${')
+          ) }}
+        shell: bash
+        run: exit 1
+
       - name: Authenticode-sign and timestamp the MSIX bundle
         uses: SSLcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
         with:
           command: batch_sign
-          username: ${{ secrets.ES_USERNAME }}
-          password: ${{ secrets.ES_PASSWORD }}
-          credential_id: ${{ secrets.CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          username: ${{ steps.doppler_sign_windows_6.outputs.SSLDOTCOM_USERNAME }}
+          password: ${{ steps.doppler_sign_windows_6.outputs.SSLDOTCOM_PASSWORD }}
+          credential_id: ${{ steps.doppler_sign_windows_6.outputs.SSLDOTCOM_CREDENTIAL_ID }}
+          totp_secret: ${{ steps.doppler_sign_windows_6.outputs.SSLDOTCOM_TOTP_SECRET }}
           dir_path: ${{ github.workspace }}\publish\sign-stage
           output_path: ${{ github.workspace }}\publish\signed
           environment_name: PROD
