@@ -59,7 +59,7 @@ jobs:
 
   dependency-review:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,7 +80,7 @@ jobs:
                 'pkg:nuget/Microsoft.Windows.SDK.BuildTools@10.0.28000.2705,pkg:nuget/Microsoft.WindowsAppSDK.Foundation@2.3.12,pkg:nuget/Microsoft.WindowsAppSDK.InteractiveExperiences@2.1.9,pkg:nuget/Microsoft.WindowsAppSDK.Runtime@2.5.1,pkg:nuget/Microsoft.WindowsAppSDK.WinUI@2.3.9,pkg:nuget/Magick.NET-Q16-AnyCPU@14.17.2' || '' }}
 
   secrets:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,7 +96,7 @@ jobs:
   test:
     if: always()
     needs: [quality, dependency-review, secrets]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions: {}
     steps:
@@ -115,7 +115,7 @@ jobs:
   required:
     if: always()
     needs: [test]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions: {}
     steps:
