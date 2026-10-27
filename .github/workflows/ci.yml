@@ -19,11 +19,12 @@ env:
 
 jobs:
   quality:
+    name: quality
     runs-on: windows-2025
     timeout-minutes: 30
     permissions:
       contents: read
-      security-events: write
+      security-events: write # Upload the CodeQL results from the verified build.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,6 +59,7 @@ jobs:
           category: /language:csharp
 
   dependency-review:
+    name: dependency-review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-26.04
     timeout-minutes: 10
@@ -65,6 +67,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Show the reviewed dependency graph
+        env:
+          LOCK_GRAPH_SHA256: ${{ hashFiles('**/packages*.lock.json') }}
+        run: |
+          printf 'NuGet lock graph SHA-256: %s\n' "$LOCK_GRAPH_SHA256"
       - name: Reject vulnerable or disallowed new dependencies
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
@@ -76,10 +83,11 @@ jobs:
           # These metadata corrections apply only to the reviewed dependency graphs.
           # Any changed graph clears them because the action ignores package URL versions.
           allow-dependencies-licenses: >-
-            ${{ hashFiles('**/packages*.lock.json') == 'eef1972e6d58bec63abea5f62c37beeb9ce46304dc5329763ec87ee038d02070' &&
-                'pkg:nuget/Microsoft.Windows.SDK.BuildTools@10.0.28000.2705,pkg:nuget/Microsoft.WindowsAppSDK.Foundation@2.3.12,pkg:nuget/Microsoft.WindowsAppSDK.InteractiveExperiences@2.1.9,pkg:nuget/Microsoft.WindowsAppSDK.Runtime@2.5.1,pkg:nuget/Microsoft.WindowsAppSDK.WinUI@2.3.9,pkg:nuget/Magick.NET-Q16-AnyCPU@14.17.2' || '' }}
+            ${{ hashFiles('**/packages*.lock.json') == '91a90a1a2eff6bd3d8778101ca4ff11424f89d6591d622ae52cb8f83bd9807b5' &&
+                'pkg:nuget/Microsoft.Windows.SDK.BuildTools@10.0.28000.2705,pkg:nuget/Microsoft.WindowsAppSDK.Foundation@2.3.12,pkg:nuget/Microsoft.WindowsAppSDK.InteractiveExperiences@2.1.9,pkg:nuget/Microsoft.WindowsAppSDK.Runtime@2.5.1,pkg:nuget/Microsoft.WindowsAppSDK.WinUI@2.3.9,pkg:nuget/Magick.NET-Q16-AnyCPU@15.0.0' || '' }}
 
   secrets:
+    name: secrets
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
@@ -94,6 +102,7 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: "false"
 
   test:
+    name: test
     if: always()
     needs: [quality, dependency-review, secrets]
     runs-on: ubuntu-26.04
@@ -113,6 +122,7 @@ jobs:
             || test "$DEPENDENCY_REVIEW_RESULT" = "skipped"
 
   required:
+    name: required
     if: always()
     needs: [test]
     runs-on: ubuntu-26.04
