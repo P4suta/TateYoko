@@ -63,6 +63,8 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-26.04
     timeout-minutes: 10
+    env:
+      MISE_ENABLE_TOOLS: dotnet
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -85,6 +87,16 @@ jobs:
           allow-dependencies-licenses: >-
             ${{ hashFiles('**/packages*.lock.json') == '91a90a1a2eff6bd3d8778101ca4ff11424f89d6591d622ae52cb8f83bd9807b5' &&
                 'pkg:nuget/Microsoft.Windows.SDK.BuildTools@10.0.28000.2705,pkg:nuget/Microsoft.WindowsAppSDK.Foundation@2.3.12,pkg:nuget/Microsoft.WindowsAppSDK.InteractiveExperiences@2.1.9,pkg:nuget/Microsoft.WindowsAppSDK.Runtime@2.5.1,pkg:nuget/Microsoft.WindowsAppSDK.WinUI@2.3.9,pkg:nuget/Magick.NET-Q16-AnyCPU@15.0.0' || '' }}
+
+      - name: Install the pinned restore toolchain
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: dotnet
+      - name: Verify Linux dependency restore
+        run: |
+          mise exec -- dotnet --version
+          mise exec -- dotnet restore TateYoko.slnx --locked-mode
+          git diff --exit-code
 
   secrets:
     name: secrets
