@@ -1,34 +1,32 @@
 # Releasing
 
-`release-please` and `.github/workflows/release.yml` own versioning and publication.
-There is no supported path for choosing a local version and uploading files by hand.
+The release proposal and [release workflow](../.github/workflows/release.yml) own versioning and publication.
+Use the automated flow for release files.
+Signing, release approval, and publication require an explicit owner instruction naming the version.
 
 ## Release contract
 
-One commit must satisfy every condition:
-
-1. restore exactly the committed dependency graphs;
-2. pass formatting, spelling, strict build, tests, coverage, audit, and mutation gates;
-3. build and inspect an x64/ARM64 MSIX bundle within its size budgets;
-4. generate a CycloneDX runtime SBOM, REUSE source SPDX SBOM, and complete notices;
-5. sign and RFC 3161 timestamp the bundle with the approved certificate;
-6. independently recheck signer, chain, timestamp, identity, and architectures;
-7. generate SHA-256 checksums and GitHub provenance/SBOM attestations; and
-8. pass UI Automation, accessibility, and visual review on Windows 11.
-
-The release remains a draft if any condition fails. There is no unsigned fallback.
+The selected commit must pass locked restoration, formatting, spelling, strict compilation, tests, coverage, dependency audit, and release-tool contracts.
+The [verification decision](adr/pull-request-verification.md) separates pull-request verification from distribution builds.
+Distribution requires an MSIX bundle for x64 and ARM64 within its size budgets, dependency inventories, and complete third-party notices.
+The bundle must carry the approved Authenticode signature and RFC 3161 timestamp.
+Independent verification checks the signer, certificate chain, timestamp, package identity, and architectures.
+The candidate includes checksums and GitHub provenance and dependency attestations.
+Windows UI Automation, accessibility, and visual review remain release requirements.
+A failed condition leaves the release as a draft.
+Publication requires valid signatures.
 
 ## Automated flow
 
-1. Conventional Commits on `main` update the release-please pull request.
-2. Merging that pull request creates a draft release and dispatches `release.yml`.
-3. `build` reruns the merge gate and uploads only signing inputs and evidence.
-4. `sign` runs eSigner behind approval of the `release` environment.
-5. `package` uses a clean runner to reverify signatures and assemble the candidate.
-   It always runs, including dry runs.
-6. `publish` attests and publishes that exact candidate only when `publish=true`.
+Conventional Commits on main update the release proposal.
+Merging the proposal creates a draft release and dispatches the release workflow.
+The build job repeats the merge gate and uploads signing inputs and build results.
+The sign job uses eSigner behind approval in the release environment.
+The package job uses a clean runner to verify signatures and assemble the candidate.
+Publication runs only when publish=true and attests the candidate.
+A dry run still signs and verifies packages but skips publication.
 
-Published files:
+The published file set contains the following files.
 
 ```text
 TateYoko.appinstaller
@@ -40,51 +38,43 @@ THIRD-PARTY-NOTICES.txt
 LICENSE.txt
 ```
 
-The AppInstaller points to `releases/latest/download/TateYoko.msixbundle`; drafts
-and failed runs cannot become update sources.
+The AppInstaller uses the `releases/latest/download/TateYoko.msixbundle` URL.
+Drafts and failed runs can't become update sources.
+The bundle signature covers its embedded MSIX packages.
+Individual MSIX files remain inside the bundle.
 
 ## Repository configuration
 
-The `release-please` environment needs `RELEASE_PLEASE_CLIENT_ID` and
-`RELEASE_PLEASE_PRIVATE_KEY`. Its GitHub App needs read/write access to Contents and
-Pull requests and an installation on this repository. App-authored pull requests
-trigger the required CI workflow.
+The main-only release-please environment prevents administrator bypass.
+The [credential guide](credential-delivery.md) describes native synchronization of RELEASE_PLEASE_CLIENT_ID and RELEASE_PLEASE_PRIVATE_KEY.
+Install the App on TateYoko with contents and pull request write permissions.
+App-authored proposals trigger required CI.
 
-The `release` environment needs the four secrets in [SIGNING.md](SIGNING.md),
-required reviewers, and a `main`-only deployment policy. Disable self-review and
-administrator bypass. The default-branch ruleset also requires one independent
-approval after the latest push and resolution of every review thread.
+Signing keeps Doppler OIDC through DOPPLER_SIGN_WINDOWS_IDENTITY_ID.
+The release environment admits main, requires the owner's approval, and prevents administrator bypass.
+See the [signing guide](SIGNING.md) for certificate requirements.
+The default branch requires successful checks, signed linear history, and resolution of review threads.
+Third-party approval isn't required for ordinary changes.
+Build and package jobs receive no signing credentials.
 
-The repository currently has one collaborator. Merges and releases intentionally
-remain blocked until a trusted independent reviewer is added. Build and package jobs
-receive no release secrets.
+## Interactive review
 
-## Smoke test
-
-Test the release commit in an interactive Windows 11 session:
+Use an interactive Windows 11 session for the selected release commit.
+Run the following commands and review the screenshots and log beneath the UI test output directory.
 
 ```powershell
 mise exec -- just run
 mise exec -- just ui-test <PID>
 ```
 
-Review every screenshot and the log under `build/ui-tests/<timestamp>/`. Do not
-approve clipped text, overlap, misleading emphasis, poor spacing, or unreadable
-states merely because automation passed.
+Reject clipped text, overlap, misleading emphasis, poor spacing, and unreadable states even when automation passes.
+An existing release tag can exercise signing without publication through a manual dispatch with publish=false.
+The selected tag and SHA must resolve to the same commit on main.
+The check uses the real certificate and needs environment approval.
 
-An existing release tag can exercise signing without publication:
+## Download verification
 
-```powershell
-gh workflow run release.yml `
-  -f tag_name=v0.0.1 `
-  -f sha=v0.0.1 `
-  -f publish=false
-```
-
-The tag and SHA must resolve to the same commit on `main`. This test requires the
-real certificate and environment approval.
-
-## Verify a download
+Run the following commands to verify the downloaded distribution.
 
 ```powershell
 gh attestation verify TateYoko.msixbundle --repo P4suta/TateYoko
@@ -92,6 +82,3 @@ Get-Content SHA256SUMS.txt
 Get-FileHash TateYoko.msixbundle -Algorithm SHA256
 Get-AuthenticodeSignature TateYoko.msixbundle | Format-List
 ```
-
-The bundle signature applies recursively to its MSIX packages. Individual MSIX
-files are neither signed nor published separately.
