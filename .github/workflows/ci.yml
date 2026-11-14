@@ -35,7 +35,7 @@ jobs:
       - name: Install pinned PowerShell analyzer
         run: mise exec -- just setup-powershell
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: csharp
           build-mode: manual
@@ -44,7 +44,7 @@ jobs:
       - name: Verify contracts, rendering, coverage, dependencies, and notices
         run: mise exec -- just ci
       - name: Analyze source
-        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: /language:csharp
           upload: never
@@ -53,7 +53,7 @@ jobs:
         run: ./.config/Test-CodeQlSarif.ps1 -Path build/codeql-sarif
       - name: Upload source analysis
         if: always()
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: build/codeql-sarif
           category: /language:csharp
