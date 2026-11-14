@@ -100,22 +100,22 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.12" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.6.5" />
         <PackageReference
             Include="Microsoft.WindowsAppSDK.InteractiveExperiences"
-            Version="2.1.9"
+            Version="2.6.5"
         />
-        <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.5.1" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.6.5" />
         <!-- Keep the component set aligned with the runtime package's validated matrix. -->
-        <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.6.5" />
         <PackageReference
             Include="Microsoft.Windows.SDK.BuildTools"
-            Version="10.0.28000.2705"
+            Version="10.0.28000.2957"
             PrivateAssets="all"
         />
         <PackageReference
             Include="Microsoft.Windows.SDK.BuildTools.WinApp"
-            Version="0.7.1"
+            Version="0.8.0"
             PrivateAssets="all"
         />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
