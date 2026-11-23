@@ -197,7 +197,8 @@ public sealed class MainViewModelTests
         await harness.ViewModel.ConvertWithPasswordAsync("wrong");
         await harness.ViewModel.ConvertWithPasswordAsync("secret");
 
-        Assert.Equal([null, "wrong", "secret"], harness.Converter.Requests.Select(r => r.Password));
+        string?[] expectedPasswords = [null, "wrong", "secret"];
+        Assert.Equal(expectedPasswords, harness.Converter.Requests.Select(r => r.Password));
         Assert.All(harness.Converter.Requests, request => Assert.Equal(output, request.OutputPath));
         Assert.Equal(ConversionState.Done, harness.ViewModel.State);
         Assert.DoesNotContain(
@@ -300,7 +301,8 @@ public sealed class MainViewModelTests
         Assert.True(harness.ViewModel.PrepareRetry());
         await harness.ViewModel.ConvertToAsync(second);
 
-        Assert.Equal([first, second], harness.Converter.Requests.Select(r => r.OutputPath));
+        string[] expectedOutputs = [first, second];
+        Assert.Equal(expectedOutputs, harness.Converter.Requests.Select(r => r.OutputPath));
         Assert.Equal(ConversionState.Done, harness.ViewModel.State);
     }
 
