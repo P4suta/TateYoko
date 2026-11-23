@@ -3,6 +3,13 @@
   "extends": ["github>P4suta/renovate-config"],
   "packageRules": [
     {
+      "description": "Keep the runtime for net10.0 tools and tests on .NET 10.",
+      "matchFileNames": ["mise.toml"],
+      "matchManagers": ["mise"],
+      "matchPackageNames": ["dotnet"],
+      "allowedVersions": "/^10\\./"
+    },
+    {
       "description": "Keep PDFsharp on the MIT-licensed 6.2 line.",
       "matchDatasources": ["nuget"],
       "matchPackageNames": ["PDFsharp"],
