@@ -152,8 +152,11 @@ internal sealed class PdfSource : IDisposable
         try
         {
             stream.Position = 0;
-            PdfDocument? document =
-                PdfReader.Open(stream, PdfDocumentOpenMode.Import, ProvidePassword)
+            PdfDocument? document = PdfReader.Open(
+                stream,
+                PdfDocumentOpenMode.Import,
+                ProvidePassword
+            )
                 ?? throw new PdfSpreadException(
                     password is null
                         ? PdfSpreadError.PasswordRequired

@@ -47,13 +47,10 @@ public sealed class LocalizationContractTests
                 .OfType<string>()
                 .Distinct(StringComparer.Ordinal),
         ];
-        Assert.All(
-            uids,
-            uid =>
-                Assert.Contains(
-                    resources.Keys,
-                    key => key.StartsWith(uid + ".", StringComparison.Ordinal)
-                )
+        Assert.All(uids, uid =>
+            Assert.Contains(resources.Keys, key =>
+                key.StartsWith(uid + ".", StringComparison.Ordinal)
+            )
         );
 
         string[] sourceFiles =
@@ -160,15 +157,13 @@ public sealed class LocalizationContractTests
         ];
 
         Assert.NotEmpty(explicitBrushes);
-        Assert.All(
-            explicitBrushes,
-            attribute =>
-                Assert.True(
-                    string.Equals(attribute.Value, "Transparent", StringComparison.Ordinal)
-                        || attribute.Value.StartsWith("{ThemeResource ", StringComparison.Ordinal),
-                    $"{attribute.Parent?.Name.LocalName}.{attribute.Name.LocalName} "
-                        + $"must use a ThemeResource, got '{attribute.Value}'."
-                )
+        Assert.All(explicitBrushes, attribute =>
+            Assert.True(
+                string.Equals(attribute.Value, "Transparent", StringComparison.Ordinal)
+                    || attribute.Value.StartsWith("{ThemeResource ", StringComparison.Ordinal),
+                $"{attribute.Parent?.Name.LocalName}.{attribute.Name.LocalName} "
+                    + $"must use a ThemeResource, got '{attribute.Value}'."
+            )
         );
     }
 
@@ -190,9 +185,8 @@ public sealed class LocalizationContractTests
         ];
 
         Assert.NotEmpty(dynamicBindings);
-        Assert.All(
-            dynamicBindings,
-            attribute => Assert.Contains("Mode=", attribute.Value, StringComparison.Ordinal)
+        Assert.All(dynamicBindings, attribute =>
+            Assert.Contains("Mode=", attribute.Value, StringComparison.Ordinal)
         );
     }
 
@@ -203,15 +197,11 @@ public sealed class LocalizationContractTests
             Path.Combine(SourceRoot, "MainPage.xaml"),
             LoadOptions.None
         );
-        Assert.DoesNotContain(
-            page.Descendants().Attributes(),
-            attribute =>
-                string.Equals(attribute.Name.LocalName, "FontSize", StringComparison.Ordinal)
+        Assert.DoesNotContain(page.Descendants().Attributes(), attribute =>
+            string.Equals(attribute.Name.LocalName, "FontSize", StringComparison.Ordinal)
         );
-        Assert.All(
-            page.Descendants().Attributes("CornerRadius"),
-            attribute =>
-                Assert.StartsWith("{ThemeResource ", attribute.Value, StringComparison.Ordinal)
+        Assert.All(page.Descendants().Attributes("CornerRadius"), attribute =>
+            Assert.StartsWith("{ThemeResource ", attribute.Value, StringComparison.Ordinal)
         );
 
         Assert.DoesNotContain(

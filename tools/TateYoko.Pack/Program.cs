@@ -758,8 +758,8 @@ internal static partial class PackApplication
             {
                 foreach (XElement package in packages)
                 {
-                    string architecture =
-                        (string?)package.Attribute("Architecture") ?? string.Empty;
+                    string architecture = (string?)package.Attribute("Architecture")
+                        ?? string.Empty;
                     string fileName = (string?)package.Attribute("FileName") ?? string.Empty;
                     ZipArchiveEntry entry = archive.Entries.Single(item =>
                         string.Equals(item.FullName, fileName, StringComparison.Ordinal)
@@ -790,8 +790,7 @@ internal static partial class PackApplication
 
             using FileStream stream = File.OpenRead(path);
             XDocument document = LoadXml(stream);
-            XElement root =
-                document.Root
+            XElement root = document.Root
                 ?? throw new InvalidOperationException("AppInstaller has no root element.");
             XNamespace expectedNamespace = "http://schemas.microsoft.com/appx/appinstaller/2018";
             if (root.Name != expectedNamespace + "AppInstaller")
@@ -1111,8 +1110,7 @@ internal static partial class PackApplication
 
         private static string FindBuildTool(string fileName)
         {
-            string packagesRoot =
-                Environment.GetEnvironmentVariable("NUGET_PACKAGES")
+            string packagesRoot = Environment.GetEnvironmentVariable("NUGET_PACKAGES")
                 ?? Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                     ".nuget",
@@ -1354,8 +1352,7 @@ internal static partial class PackApplication
             startInfo.ArgumentList.Add(argument);
         }
 
-        using Process process =
-            Process.Start(startInfo)
+        using Process process = Process.Start(startInfo)
             ?? throw new InvalidOperationException($"Could not start {fileName}.");
         if (!process.WaitForExit(30 * 60 * 1000))
         {

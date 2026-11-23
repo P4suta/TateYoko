@@ -201,9 +201,8 @@ public sealed class MainViewModelTests
         Assert.Equal(expectedPasswords, harness.Converter.Requests.Select(r => r.Password));
         Assert.All(harness.Converter.Requests, request => Assert.Equal(output, request.OutputPath));
         Assert.Equal(ConversionState.Done, harness.ViewModel.State);
-        Assert.DoesNotContain(
-            harness.ViewModel.GetType().GetProperties(),
-            property => property.Name.Contains("Password", StringComparison.OrdinalIgnoreCase)
+        Assert.DoesNotContain(harness.ViewModel.GetType().GetProperties(), property =>
+            property.Name.Contains("Password", StringComparison.OrdinalIgnoreCase)
         );
     }
 
