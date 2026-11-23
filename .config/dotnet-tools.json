@@ -3,14 +3,14 @@
   "isRoot": true,
   "tools": {
     "cyclonedx": {
-      "version": "6.3.1",
+      "version": "6.3.2",
       "commands": [
         "dotnet-CycloneDX"
       ],
       "rollForward": false
     },
     "csharpier": {
-      "version": "1.3.0",
+      "version": "1.4.0",
       "commands": [
         "csharpier"
       ],
