@@ -4,9 +4,8 @@
   "packageRules": [
     {
       "description": "Keep the runtime for net10.0 tools and tests on .NET 10.",
-      "matchFileNames": ["mise.toml"],
-      "matchManagers": ["mise"],
-      "matchPackageNames": ["dotnet"],
+      "matchFileNames": [".config/runtime/global.json"],
+      "matchPackageNames": ["dotnet-sdk"],
       "allowedVersions": "/^10\\./"
     },
     {
