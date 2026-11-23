@@ -18,17 +18,21 @@ setup-poppler:
     ./.config/Install-Poppler.ps1
 
 # Install the exactly pinned host toolchain.
-setup: setup-powershell setup-poppler
+setup: setup-runtime setup-powershell setup-poppler
     mise install
 
+[working-directory(".config/runtime")]
+setup-runtime:
+    mise install dotnet
+
 # Restore manifest-pinned .NET tools and refresh NuGet lock files.
-restore:
+restore: setup-runtime
     dotnet tool restore
     dotnet restore TateYoko.slnx
     dotnet restore src/TateYoko.App/TateYoko.App.csproj --force-evaluate -p:DistributionMode=Msix -p:PublishReadyToRun=true
 
 # Reproduce only the committed dependency graph; CI and releases use this.
-restore-locked:
+restore-locked: setup-runtime
     dotnet tool restore
     dotnet restore TateYoko.slnx --locked-mode
     dotnet restore src/TateYoko.App/TateYoko.App.csproj --locked-mode -p:DistributionMode=Msix -p:PublishReadyToRun=true
@@ -66,7 +70,7 @@ notices:
 sbom version=version:
     reuse lint
     New-Item -ItemType Directory -Force build/sbom | Out-Null
-    dotnet CycloneDX src/TateYoko.App/TateYoko.App.csproj -o build/sbom -F Json -fn tateyoko.cdx.json -sv {{version}} -sn TateYoko -st Application -ed
+    dotnet CycloneDX src/TateYoko.App/TateYoko.App.csproj -o build/sbom -F Json -fn tateyoko.cdx.json -sv {{ version }} -sn TateYoko -st Application -ed
     reuse spdx --creator-person "Yasunobu Sakashita" -o build/sbom/tateyoko-sources.spdx
 
 # Build, register, and launch the packaged development app through the pinned WinApp CLI.
@@ -75,7 +79,7 @@ run:
 
 # Exercise the running app through Windows UI Automation and capture RC evidence.
 ui-test app_pid:
-    ./tests/ui/ui-tests.ps1 -AppPid {{app_pid}}
+    ./tests/ui/ui-tests.ps1 -AppPid {{ app_pid }}
 
 # Regenerate all icon and MSIX logo assets from the checked-in source icon.
 icons:
@@ -111,23 +115,23 @@ reuse-lint:
 
 # Build and validate the unsigned x64/ARM64 MSIX bundle.
 dist-build version=version:
-    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- build --version {{version}}
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- build --version {{ version }}
 
 # Copy exactly the release files that must receive Authenticode signatures.
 sign-stage version=version:
-    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- stage-signing --version {{version}}
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- stage-signing --version {{ version }}
 
 # Collect externally signed artifacts and immediately validate them.
 sign-collect version=version:
-    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- collect-signing --version {{version}}
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- collect-signing --version {{ version }}
 
 # Revalidate signer identity, timestamp, bundle architecture, and AppInstaller.
 sign-verify version=version:
-    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- verify --version {{version}}
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- verify --version {{ version }}
 
 # Assemble release files only after signatures, SBOM, notices, and license exist.
 package version=version:
-    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- package --version {{version}}
+    dotnet run --project tools/TateYoko.Pack -c Release --no-restore -- package --version {{ version }}
 
 # Print the authoritative external-signing input list.
 list-signable:
