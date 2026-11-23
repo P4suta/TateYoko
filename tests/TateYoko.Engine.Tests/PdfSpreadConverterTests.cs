@@ -173,15 +173,12 @@ public sealed class PdfSpreadConverterTests
         using var temp = new TempDirectory();
         string input = temp.File("named-feature.pdf");
         string output = temp.File("named-feature_spread.pdf");
-        SamplePdf.CreateCustomized(
-            input,
-            (document, _) =>
-            {
-                var names = new PdfDictionary(document);
-                names.Elements[feature] = new PdfDictionary(document);
-                document.Internals.Catalog.Elements["/Names"] = names;
-            }
-        );
+        SamplePdf.CreateCustomized(input, (document, _) =>
+        {
+            var names = new PdfDictionary(document);
+            names.Elements[feature] = new PdfDictionary(document);
+            document.Internals.Catalog.Elements["/Names"] = names;
+        });
 
         PdfSpreadException error = await Assert.ThrowsAsync<PdfSpreadException>(() =>
             _converter.ConvertAsync(
@@ -200,9 +197,8 @@ public sealed class PdfSpreadConverterTests
         using var temp = new TempDirectory();
         string input = temp.File("malformed-annotations.pdf");
         string output = temp.File("malformed-annotations_spread.pdf");
-        SamplePdf.CreateCustomized(
-            input,
-            (document, page) => page.Elements["/Annots"] = new PdfDictionary(document)
+        SamplePdf.CreateCustomized(input, (document, page) =>
+            page.Elements["/Annots"] = new PdfDictionary(document)
         );
 
         PdfSpreadException error = await Assert.ThrowsAsync<PdfSpreadException>(() =>

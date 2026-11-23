@@ -117,8 +117,7 @@ internal static class CoverageGate
             XmlResolver = null,
         };
         using XmlReader reader = XmlReader.Create(path, settings);
-        XElement root =
-            XDocument.Load(reader, LoadOptions.None).Root
+        XElement root = XDocument.Load(reader, LoadOptions.None).Root
             ?? throw new InvalidOperationException($"Coverage report is empty: {path}");
         if (root.Name.LocalName != "coverage")
         {
@@ -185,8 +184,7 @@ internal static class CoverageGate
         }
 
         decimal calculated = (decimal)covered / valid;
-        string declaredText =
-            (string?)root.Attribute(declaredRateName)
+        string declaredText = (string?)root.Attribute(declaredRateName)
             ?? throw new InvalidOperationException($"Coverage report has no {declaredRateName}.");
         if (
             !decimal.TryParse(
@@ -209,8 +207,7 @@ internal static class CoverageGate
 
     private static int ParseCount(XElement root, string name)
     {
-        string value =
-            (string?)root.Attribute(name)
+        string value = (string?)root.Attribute(name)
             ?? throw new InvalidOperationException($"Coverage report has no {name}.");
         if (
             !int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int result)

@@ -132,8 +132,7 @@ internal static class NoticeApplication
                 continue;
             }
 
-            string relativePath =
-                library.GetProperty("path").GetString()
+            string relativePath = library.GetProperty("path").GetString()
                 ?? throw new InvalidOperationException(
                     $"Package {libraryName} has no package path."
                 );
@@ -602,8 +601,7 @@ internal static class NoticeApplication
                 );
             }
 
-            currentPath =
-                Path.GetDirectoryName(currentPath)
+            currentPath = Path.GetDirectoryName(currentPath)
                 ?? throw new InvalidOperationException($"Could not walk package path: {candidate}");
         }
     }

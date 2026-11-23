@@ -287,9 +287,8 @@ public sealed class InternalBoundaryTests
         using var temp = new TempDirectory();
         string annotations = temp.File("empty-annotations.pdf");
         string userUnit = temp.File("default-user-unit.pdf");
-        SamplePdf.CreateCustomized(
-            annotations,
-            (document, page) => page.Elements["/Annots"] = new PdfArray(document)
+        SamplePdf.CreateCustomized(annotations, (document, page) =>
+            page.Elements["/Annots"] = new PdfArray(document)
         );
         SamplePdf.CreateCustomized(userUnit, (_, page) => page.Elements.SetReal("/UserUnit", 1));
 

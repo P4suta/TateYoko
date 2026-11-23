@@ -35,8 +35,7 @@ internal sealed class ShellLauncher : IShellLauncher
 
     private static void Start(ProcessStartInfo startInfo)
     {
-        using Process process =
-            Process.Start(startInfo)
+        using Process process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Windows did not start the requested action.");
     }
 }

@@ -261,8 +261,7 @@ public sealed partial class MainPage : Page
                     break;
             }
 
-            AutomationPeer? peer =
-                FrameworkElementAutomationPeer.FromElement(LiveRegionText)
+            AutomationPeer? peer = FrameworkElementAutomationPeer.FromElement(LiveRegionText)
                 ?? FrameworkElementAutomationPeer.CreatePeerForElement(LiveRegionText);
             peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         });

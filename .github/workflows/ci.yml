@@ -85,8 +85,8 @@ jobs:
           # These metadata corrections apply only to the reviewed dependency graphs.
           # Any changed graph clears them because the action ignores package URL versions.
           allow-dependencies-licenses: >-
-            ${{ hashFiles('**/packages*.lock.json') == '91a90a1a2eff6bd3d8778101ca4ff11424f89d6591d622ae52cb8f83bd9807b5' &&
-                'pkg:nuget/Microsoft.Windows.SDK.BuildTools@10.0.28000.2705,pkg:nuget/Microsoft.WindowsAppSDK.Foundation@2.3.12,pkg:nuget/Microsoft.WindowsAppSDK.InteractiveExperiences@2.1.9,pkg:nuget/Microsoft.WindowsAppSDK.Runtime@2.5.1,pkg:nuget/Microsoft.WindowsAppSDK.WinUI@2.3.9,pkg:nuget/Magick.NET-Q16-AnyCPU@15.0.0' || '' }}
+            ${{ hashFiles('**/packages*.lock.json') == '12c72467944c5b85b204617ab0aa9259d21758004cf1743335b04c58e5727a3f' &&
+                'pkg:nuget/Microsoft.Windows.SDK.BuildTools@10.0.28000.2957,pkg:nuget/Microsoft.WindowsAppSDK.Foundation@2.7.0,pkg:nuget/Microsoft.WindowsAppSDK.InteractiveExperiences@2.7.0,pkg:nuget/Microsoft.WindowsAppSDK.Runtime@2.7.0,pkg:nuget/Microsoft.WindowsAppSDK.WinUI@2.7.0,pkg:nuget/Magick.NET-Q16-AnyCPU@15.1.0' || '' }}
 
       - name: Install the pinned restore toolchain
         uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
